@@ -165,9 +165,10 @@ export class Hangar {
   }
 
   pips(l, max) {
-    if (max > 20) return '';
-    return `<div class="pips">${Array.from({ length: max }, (_, i) => `<i class="${i < l ? 'f' : ''}"></i>`).join('')}</div>`;
+    // one consistent level bar for every upgrade, whatever its max level
+    return `<div class="lvbar"><i style="width:${Math.min(100, l / max * 100)}%"></i></div>`;
   }
+
 
   upgrades() {
     const S = this.S, vis = visibleUpgrades(S);
@@ -252,6 +253,7 @@ export class Hangar {
       const l = relic(S, r.id), maxed = l >= r.max, c = r.cost(l), ok = !maxed && S.shards >= c;
       html += `<div class="item"><h4>${r.name}<small>Lv ${l}/${r.max}</small></h4><p>${r.desc}</p>
         <div class="eff">${r.fmt(l)}${maxed ? '' : ` <span>→ ${r.fmt(l + 1)}</span>`}</div>
+        ${this.pips(l, r.max)}
         <button class="buy ${ok ? 'ok' : ''}" data-relic="${r.id}" ${ok ? '' : 'disabled'}>${maxed ? 'MAXED' : `<span class="cost k">✦</span>${c}`}</button></div>`;
     }
     return html + '</div></section>';

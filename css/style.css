@@ -260,9 +260,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .item p { margin: 0; font-size: 12.5px; color: #aeb9c8; line-height: 1.4; }
 .item .eff { font: 600 12.5px/1.3 "Chakra Petch", sans-serif; color: var(--cyan); }
 .item .eff span { color: var(--muted); }
-.pips { display: flex; gap: 2px; flex-wrap: wrap; }
-.pips i { width: 6px; height: 4px; border-radius: 1px; background: rgba(255,255,255,.1); }
-.pips i.f { background: var(--cyan); }
+.lvbar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
+.lvbar i { display: block; height: 100%; border-radius: 2px; background: var(--cyan); box-shadow: 0 0 6px rgba(111,227,255,.6); transition: width .3s ease; }
 .buy {
   justify-self: stretch; margin-top: 2px; display: flex; justify-content: center; align-items: center; gap: 6px;
   padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2);
