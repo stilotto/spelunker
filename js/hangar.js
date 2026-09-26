@@ -40,7 +40,7 @@ const ICONS = {
 };
 
 // Bay grid scroll speed (px/s) and the stat readout's timing (seconds).
-const GRID_RISE = 20, RO_IN = 0.5, RO_HOLD = 2.4, RO_OUT = 0.9, RO_GAP = 0.35;
+const GRID_RISE = 20, RO_IN = 1.1, RO_HOLD = 2.4, RO_OUT = 1.8, RO_GAP = 0.35;
 
 export class Hangar {
   constructor(S, { onLaunch }) {
@@ -346,7 +346,8 @@ export class Hangar {
     ro.t += dt;
     // fade in, hold steady, then fade out while drifting up with the bay grid
     const out = Math.max(0, ro.t - RO_IN - RO_HOLD);
-    const a = Math.max(0, Math.min(1, ro.t / RO_IN, 1 - out / RO_OUT));
+    const k = Math.min(1, ro.t / RO_IN), fadeIn = k * k * (3 - 2 * k); // eased, starts from nothing
+    const a = Math.max(0, Math.min(fadeIn, 1 - out / RO_OUT));
     if (a <= 0) return;
     const y = ro.y - Math.min(out, RO_OUT) * GRID_RISE;
     ctx.save();
