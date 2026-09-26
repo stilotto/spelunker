@@ -216,7 +216,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .stat small { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .stat b { font: 600 15px/1.2 "Chakra Petch", sans-serif; }
 .launch { width: 100%; }
-.launch span { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+.launch, .launch-mini { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.launch-mini { gap: 6px; }
+.arrow { width: 14px; height: 18px; flex: none; animation: nudge 1.4s ease-in-out infinite; }
+.launch-mini .arrow { width: 11px; height: 14px; }
 @keyframes nudge { 50% { transform: translateY(3px); } }
 
 .shop { min-width: 0; }
@@ -241,7 +244,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dock button.on svg { filter: none; opacity: 1; transform: translateY(-1px) scale(1.1); }
 .dock .dot { position: absolute; top: 4px; right: calc(50% - 20px); width: 9px; height: 9px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 2px #0a0d13, 0 0 8px var(--pink); }
 .dock [data-tab="ship"] { display: none; }
-.launch-mini { display: none; padding: 9px 12px; font-size: 13px; }
+.launch-mini { display: none !important; padding: 9px 12px; font-size: 13px; }
 .group { margin-bottom: 18px; }
 .group h3 { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font: 600 11px/1 Inter, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
 .group h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -319,7 +322,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .preview { max-height: 220px; }
   .dock [data-tab="ship"] { display: flex; }
   .hgrid.v-ship .shop, .hgrid:not(.v-ship) .bay { display: none; }
-  .hangar:not(.v-ship) .launch-mini { display: inline-block; }
+  .hangar:not(.v-ship) .launch-mini { display: inline-flex !important; }
   .hangar:not(.v-ship) .hfoot { display: none; }
   .brand { font-size: 15px; letter-spacing: .14em; }
   .cur { padding: 5px 8px; font-size: 14px; }

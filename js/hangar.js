@@ -135,7 +135,11 @@ export class Hangar {
       ['Heat cap', fmt(st.heatMax)], ['Cooling', `${st.cooling.toFixed(1)}/s`],
     ];
     $('#statgrid').innerHTML = stats.map(([a, b]) => `<div class="stat"><small>${a}</small><b>${b}</b></div>`).join('');
-    $('#btnLaunch').firstChild.textContent = S.runs === 0 ? 'Launch ' : `Launch run ${S.runs + 1} `;
+    $('#btnLaunch b').textContent = S.runs === 0 ? 'Launch' : `Launch run ${S.runs + 1}`;
+    this.readStats = stats.concat([
+      ['Turrets', String(st.turrets)], ['Ram', `${fmt(st.ram)} dps`], ['Armor', `${Math.round(st.armor * 100)}%`],
+      st.shieldMax ? ['Shield regen', `${st.shieldRegen.toFixed(1)}/s`] : null,
+    ].filter(Boolean)).filter((x, i, a) => a.findIndex(y => y[0] === x[0]) === i);
 
     // tabs
     const keys = Object.keys(this.keys());
@@ -319,6 +323,40 @@ export class Hangar {
       ctx.fillStyle = '#12202a'; ctx.strokeStyle = '#7dffcf'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(wx, wy, 8, 0, TAU); ctx.fill(); ctx.stroke();
     }
+    ctx.restore();
+    this.drawReadout(ctx, w, h, dt);
+  }
+
+  // One stat at a time fades in beside the ship, then out, in a new random spot.
+  drawReadout(ctx, w, h, dt) {
+    const list = this.readStats; if (!list || !list.length) return;
+    let ro = this.ro;
+    if (!ro || ro.t >= ro.life) {
+      let i; do { i = (Math.random() * list.length) | 0; } while (list.length > 1 && ro && list[i][0] === ro.label);
+      const left = ro ? !ro.left : Math.random() < 0.5;
+      ro = this.ro = {
+        label: list[i][0], value: list[i][1], left, t: 0, life: 2.6,
+        x: left ? w * (0.04 + Math.random() * 0.05) : w * (0.96 - Math.random() * 0.05),
+        y: h * (0.12 + Math.random() * 0.74),
+      };
+    }
+    ro.t += dt;
+    const a = Math.min(1, ro.t / 0.35, (ro.life - ro.t) / 0.6);
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = ro.left ? 'left' : 'right';
+    ctx.shadowColor = 'rgba(111,227,255,0.8)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = 'rgba(111,227,255,0.75)';
+    ctx.font = '600 10px "Chakra Petch", sans-serif';
+    ctx.fillText(ro.label.toUpperCase().split('').join(String.fromCharCode(8202)), ro.x, ro.y);
+    ctx.fillStyle = '#b4f3ff';
+    ctx.font = '700 17px "Chakra Petch", sans-serif';
+    ctx.fillText(ro.value, ro.x, ro.y + 19);
+    // a short bracket tick toward the ship
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(111,227,255,0.5)'; ctx.lineWidth = 1;
+    const bx = ro.left ? ro.x - 3 : ro.x + 3;
+    ctx.beginPath(); ctx.moveTo(bx, ro.y - 9); ctx.lineTo(bx, ro.y + 23); ctx.stroke();
     ctx.restore();
   }
 }
