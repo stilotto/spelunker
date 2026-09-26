@@ -70,10 +70,11 @@
   <header class="hbar">
     <div class="brand">SPELUNKER</div>
     <div class="wallet">
-      <span class="cur s" title="Salvage: buys upgrades"><i>⬡</i><b id="wSalv">0</b></span>
-      <span class="cur d" id="wDataWrap" title="Data: buys research"><i>◈</i><b id="wData">0</b></span>
-      <span class="cur k" id="wShardWrap" title="Core shards: buys relics" hidden><i>✦</i><b id="wShard">0</b></span>
+      <button class="cur s" data-cur="s" aria-label="Salvage: what is this?"><i>⬡</i><b id="wSalv">0</b></button>
+      <button class="cur d" data-cur="d" id="wDataWrap" aria-label="Data: what is this?"><i>◈</i><b id="wData">0</b></button>
+      <button class="cur k" data-cur="k" id="wShardWrap" aria-label="Core shards: what is this?" hidden><i>✦</i><b id="wShard">0</b></button>
     </div>
+    <div id="curInfo" class="curinfo" role="status" hidden></div>
     <button id="btnSound" class="icon-btn" aria-label="Toggle sound">♪</button>
   </header>
   <div class="hgrid">

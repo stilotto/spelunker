@@ -179,6 +179,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--panel2); border: 1px solid var(--line); font: 700 15px/1 "Chakra Petch", sans-serif;
 }
 .cur i { font-style: normal; }
+.cur:hover, .cur.on { border-color: currentColor; }
+.cur.s.on { border-color: var(--gold); } .cur.d.on { border-color: var(--violet); } .cur.k.on { border-color: var(--pink); }
+.curinfo {
+  position: absolute; top: calc(100% + 6px); left: 12px; right: 12px; margin: 0 auto; max-width: 380px; z-index: 5;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  box-shadow: 0 20px 50px -15px rgba(0,0,0,.9); font-size: 13px; color: #c3ccd8; line-height: 1.45; animation: pop .2s ease;
+}
+.curinfo b { display: block; font: 700 15px/1.2 "Chakra Petch", sans-serif; margin-bottom: 4px; }
+.curinfo p { margin: 0 0 4px; }
+.curinfo small { color: var(--muted); font-size: 12px; }
 .cur.s i, .cost.s { color: var(--gold); }
 .cur.d i, .cost.d { color: var(--violet); }
 .cur.k i, .cost.k { color: var(--pink); }

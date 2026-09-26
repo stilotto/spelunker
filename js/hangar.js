@@ -28,6 +28,27 @@ export class Hangar {
     $('#btnLaunch').addEventListener('click', () => this.onLaunch());
     $('#massPrev').addEventListener('click', () => this.setMass(-1));
     $('#massNext').addEventListener('click', () => this.setMass(1));
+    // tap a currency to learn what it is
+    const info = $('#curInfo');
+    const CUR = {
+      s: ['⬡ Salvage', 'var(--gold)', 'Scrap and crystal you pull from wrecks, caches and the depth you reach.', 'Spend it on Upgrades: hull, drive, heat, weapons and systems.'],
+      d: ['◈ Data', 'var(--violet)', 'Scans sent home over the Ansible: more for going deeper, and a bonus the first time you meet a new enemy.', 'Spend it on Research, which unlocks new systems and crew, or to sim-train your crew.'],
+      k: ['✦ Core shards', 'var(--pink)', 'Pieces of a destroyed core. You get them by reaching and destroying a world\'s core.', 'Spend them on Relics: permanent bonuses for every run.'],
+    };
+    document.querySelector('.wallet').addEventListener('click', e => {
+      const b = e.target.closest('[data-cur]'); if (!b) return;
+      const open = !info.hidden && info.dataset.k === b.dataset.cur;
+      document.querySelectorAll('.cur').forEach(c => c.classList.remove('on'));
+      if (open) { info.hidden = true; return; }
+      const [name, col, what, use] = CUR[b.dataset.cur];
+      info.innerHTML = `<b style="color:${col}">${name}</b><p>${what}</p><small>${use}</small>`;
+      info.dataset.k = b.dataset.cur; info.hidden = false; b.classList.add('on');
+    });
+    document.addEventListener('pointerdown', e => {
+      if (!info.hidden && !e.target.closest('.wallet') && !e.target.closest('#curInfo')) {
+        info.hidden = true; document.querySelectorAll('.cur').forEach(c => c.classList.remove('on'));
+      }
+    });
   }
 
   setS(S) { this.S = S; }
