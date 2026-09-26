@@ -40,7 +40,8 @@ export class Tour {
     addEventListener('resize', () => this.active && this.resize());
   }
 
-  open() {
+  // open() plays the full tour; open('gunner') shows just that AI's station.
+  open(crewId) {
     const S = this.h.S;
     this.S = S; this.st = computeStats(S);
     this.crew = crewUnlocked(S);
@@ -54,14 +55,21 @@ export class Tour {
       ph.push({ k: 'room', i, d: HOLD });
     });
     ph.push({ k: 'out', d: this.rm ? 0.6 : ZOOM_OUT });
+    this.single = crewId ? TOUR.findIndex(r => r.crew === crewId) : -1;
+    if (this.single >= 0) ph.splice(0, ph.length, { k: 'room', i: this.single, d: Infinity });
     let t = 0; for (const p of ph) { p.t0 = t; t += p.d; }
     this.phases = ph; this.total = t;
+    const skip = $('#tourSkip');
+    skip.textContent = this.single >= 0 ? '✕' : 'Skip ✕';
+    skip.setAttribute('aria-label', this.single >= 0 ? 'Back to crew' : 'Skip tour');
+    skip.classList.toggle('round', this.single >= 0);
+    $('#tourHint').hidden = this.single >= 0;
     this.t = 0; this.boot = {};
     this.screens = TOUR.map(r => this.roomScreens(r));
     this.el.hidden = false;
     this.active = true;
     this.resize();
-    sfx('launch');
+    sfx(this.single >= 0 ? 'contact' : 'launch');
   }
 
   close() {
@@ -70,6 +78,7 @@ export class Tour {
   }
 
   advance() {
+    if (this.single >= 0) return;
     // tap: jump to the next room (or finish the zoom-in right away)
     const i = this.phases.findIndex(p => this.t >= p.t0 && this.t < p.t0 + p.d);
     const cur = this.phases[i];
@@ -96,7 +105,7 @@ export class Tour {
     const k = clamp((this.t - p.t0) / p.d, 0, 1);
     if (p.k === 'in') this.zoom(k, 0, true);
     else if (p.k === 'out') this.zoom(k, TOUR.length - 1, false);
-    else if (p.k === 'room') this.drawRoom(p.i, 0, 1);
+    else if (p.k === 'room') this.drawRoom(p.i, 0, this.single >= 0 ? ease(clamp(this.t / 0.35, 0, 1)) : 1);
     else if (this.rm) { // reduced motion: crossfade instead of sliding
       this.drawRoom(p.from, 0, 1 - k); this.drawRoom(p.to, 0, k);
     } else {
@@ -105,6 +114,7 @@ export class Tour {
       this.drawRoom(p.to, (1 - e) * w, 1);
       this.bulkhead((1 - e) * w);
     }
+    if (this.single >= 0) return;
     if (p.k === 'room' && !p.sfx) { p.sfx = true; sfx('contact'); }
     $('#tourHint').hidden = p.k === 'out';
   }

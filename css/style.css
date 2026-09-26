@@ -367,3 +367,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: absolute; left: 50%; bottom: calc(12px + var(--safe-b)); transform: translateX(-50%); pointer-events: none;
   font: 500 11px/1 Inter, sans-serif; color: #8d99ab; letter-spacing: .06em; white-space: nowrap;
 }
+
+.note { margin: -2px 0 12px; font-size: 13px; line-height: 1.45; color: #aeb9c8; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--violet); border-radius: 10px; padding: 10px 12px; }
+.note b { color: var(--violet); }
+.avbtn { padding: 0; border: 0; background: none; border-radius: 14px; cursor: pointer; transition: transform .15s ease, filter .15s ease; }
+.avbtn:hover { transform: scale(1.06); filter: brightness(1.2); }
+.avbtn:active { transform: scale(.97); }
+.tour-skip.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }

@@ -227,13 +227,15 @@ export class Hangar {
 
   crew() {
     const S = this.S;
-    let html = `<section class="group"><h3>AI crew · skills persist over the Ansible link</h3><div class="items">`;
+    let html = `<section class="group"><h3>AI crew · skills persist over the Ansible link</h3>
+      <p class="note">Crew earn XP free on every run. <b>Sim-train</b> gives the same XP instantly, paid in Data instead. Data also buys research, so train when you have Data to spare or an AI is falling behind. Tap a portrait to visit their station.</p>
+      <div class="items">`;
     for (const id of crewUnlocked(S)) {
       const c = S.crew[id], d = CREW[id];
       const need = crewXpNeed(c.lvl), maxed = c.lvl >= CREW_MAX, tc = trainCost(c), ok = !maxed && S.data >= tc;
       const nw = this.isNew('c:' + id);
       html += `<div class="item ${nw ? 'new' : ''}">${nw ? '<span class="new-b">NEW</span>' : ''}
-        <div class="crew">${this.avatar(id)}<div>
+        <div class="crew"><button class="avbtn" data-station="${id}" aria-label="Visit ${d.name}'s station">${this.avatar(id)}</button><div>
           <h4>${d.name}<small>${d.role}</small></h4>
           <div class="lvl" style="color:${d.color}">Level ${c.lvl}${maxed ? ' · MAX' : ''}</div>
           <div class="xp"><i style="width:${maxed ? 100 : Math.min(100, c.xp / need * 100)}%"></i></div>
@@ -264,6 +266,7 @@ export class Hangar {
 
   click(e) {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.station) { this.tour.open(b.dataset.station); return; }
     const S = this.S;
     let ok = false, cur = null;
     if (b.dataset.up) { ok = buyUpgrade(S, visibleUpgrades(S).find(u => u.id === b.dataset.up)); cur = '.cur.s'; }
