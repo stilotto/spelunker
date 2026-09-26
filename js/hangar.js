@@ -350,18 +350,20 @@ export class Hangar {
     const a = Math.max(0, Math.min(fadeIn, 1 - out / RO_OUT));
     if (a <= 0) return;
     const y = ro.y - Math.min(out, RO_OUT) * GRID_RISE;
+    // Fade is baked into each colour: iPhone WebKit doesn't reliably apply
+    // globalAlpha to text drawn with a shadow glow.
+    const c = (rgb, al) => `rgba(${rgb},${(al * a).toFixed(3)})`;
     ctx.save();
-    ctx.globalAlpha = a;
     ctx.textAlign = ro.left ? 'left' : 'right';
-    ctx.shadowColor = 'rgba(111,227,255,0.8)'; ctx.shadowBlur = 8;
-    ctx.fillStyle = 'rgba(111,227,255,0.75)';
+    ctx.shadowColor = c('111,227,255', 0.8); ctx.shadowBlur = 8 * a;
+    ctx.fillStyle = c('111,227,255', 0.75);
     ctx.font = '600 10px "Chakra Petch", sans-serif';
     ctx.fillText(ro.label.toUpperCase().split('').join(String.fromCharCode(8202)), ro.x, y);
-    ctx.fillStyle = '#b4f3ff';
+    ctx.fillStyle = c('180,243,255', 1);
     ctx.font = '700 17px "Chakra Petch", sans-serif';
     ctx.fillText(ro.value, ro.x, y + 19);
     // a short bracket tick toward the ship
-    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(111,227,255,0.5)'; ctx.lineWidth = 1;
+    ctx.shadowBlur = 0; ctx.strokeStyle = c('111,227,255', 0.5); ctx.lineWidth = 1;
     const bx = ro.left ? ro.x - 3 : ro.x + 3;
     ctx.beginPath(); ctx.moveTo(bx, y - 9); ctx.lineTo(bx, y + 23); ctx.stroke();
     ctx.restore();
