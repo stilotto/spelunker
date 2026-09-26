@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spelunker</title>
+<meta name="description" content="Drop into an enemy world and fall toward its core. Upgrade between runs, train your AI crew, get a little deeper every time.">
+<meta name="theme-color" content="#07090d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M9 19 L23 19 L16 31 Z' fill='%23aab6c8'/%3E%3Ccircle cx='16' cy='14' r='10' fill='%232f3a4a' stroke='%238796ab' stroke-width='2'/%3E%3Ccircle cx='16' cy='14' r='5' fill='%236fe3ff'/%3E%3C/svg%3E">
+</head>
+<body>
+<canvas id="game" aria-label="Spelunker game view"></canvas>
+
+<!-- ============ in-run HUD ============ -->
+<div id="hud" class="hud" hidden>
+  <div class="hud-top">
+    <div class="depth"><b id="hDepth">0</b><span>m</span></div>
+    <div class="sub"><span id="hMass">CINDER</span> · core <span id="hCore">3000</span> m</div>
+    <div class="bars">
+      <div class="bar hull"><label>Hull</label><div class="tr"><i id="bHull"></i></div></div>
+      <div class="bar shield" id="rowShield"><label>Shield</label><div class="tr"><i id="bShield"></i></div></div>
+      <div class="bar heat"><label>Heat</label><div class="tr"><i id="bHeat"></i></div></div>
+    </div>
+  </div>
+  <div class="hud-tl">
+    <div class="loot"><span class="ico-s">⬡</span> <b id="hSalv">0</b></div>
+    <div class="kills"><span id="hKills">0</span> kills</div>
+  </div>
+  <button id="bPause" class="pausebtn" aria-label="Pause">
+    <svg viewBox="0 0 16 16"><rect x="3" y="2" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" rx="1" fill="currentColor"/></svg>
+  </button>
+  <div class="gauge" aria-hidden="true">
+    <div class="track"><i class="best" id="gBest"></i><i class="me" id="gMe"></i></div>
+    <span>CORE</span>
+  </div>
+  <div id="alert" class="alert" hidden>⚠ INTRUDERS ABOARD <b id="alertN">0</b></div>
+  <div id="toasts" class="toasts"></div>
+  <div id="contact" class="contact" hidden></div>
+  <div id="tip" class="tip" hidden></div>
+  <div class="ctrls">
+    <div class="pair">
+      <button id="bBrake" class="hold">Brake<small>W / ↑</small></button>
+      <button id="bDive" class="hold">Dive<small>S / ↓</small></button>
+    </div>
+    <div class="pair">
+      <button id="bEmp" class="abil" hidden>EMP<small>Space</small><i class="cd"></i></button>
+      <button id="bOd" class="abil" hidden>Overdrive<small>Q</small><i class="cd"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ title ============ -->
+<section id="title" class="screen title" hidden>
+  <div class="title-inner">
+    <div class="kicker">Ansible Directorate · Deep Insertion Program</div>
+    <h1 class="logo">SPELUNKER</h1>
+    <p class="lede">The enemy is not a fleet. It is a <em>world</em>. Drop the Spelunker into it and fall toward the core. You won't make it the first time. Your AI crew will remember every metre.</p>
+    <button id="btnBegin" class="btn primary big">Begin descent</button>
+    <p class="fine">Steer: drag, or A/D · Brake W · Dive S</p>
+    <a class="home" href="https://stilotto.github.io/">More games from Stilotto</a>
+  </div>
+</section>
+
+<!-- ============ hangar ============ -->
+<section id="hangar" class="screen hangar" hidden>
+  <header class="hbar">
+    <div class="brand">SPELUNKER</div>
+    <div class="wallet">
+      <span class="cur s" title="Salvage: buys upgrades"><i>⬡</i><b id="wSalv">0</b></span>
+      <span class="cur d" id="wDataWrap" title="Data: buys research"><i>◈</i><b id="wData">0</b></span>
+      <span class="cur k" id="wShardWrap" title="Core shards: buys relics" hidden><i>✦</i><b id="wShard">0</b></span>
+    </div>
+    <button id="btnSound" class="icon-btn" aria-label="Toggle sound">♪</button>
+  </header>
+  <div class="hgrid">
+    <aside class="bay">
+      <div class="massnav">
+        <button id="massPrev" class="icon-btn" aria-label="Previous target">‹</button>
+        <div class="massname"><small id="massKind">Molten world</small><b id="massName">CINDER</b></div>
+        <button id="massNext" class="icon-btn" aria-label="Next target">›</button>
+      </div>
+      <canvas id="preview" class="preview" aria-hidden="true"></canvas>
+      <p id="massBlurb" class="blurb"></p>
+      <div class="progress">
+        <div class="ptrack"><i id="pBest"></i><span id="pBestLbl"></span></div>
+        <div class="plabels"><span>surface</span><span id="pCore">core 3000 m</span></div>
+      </div>
+      <div class="statgrid" id="statgrid"></div>
+      <button id="btnLaunch" class="btn primary big launch">Launch <span>▼</span></button>
+    </aside>
+    <main class="shop">
+      <nav class="tabs" id="tabs"></nav>
+      <div id="tabBody" class="tabbody"></div>
+    </main>
+  </div>
+  <footer class="hfoot">
+    <a class="home" href="https://stilotto.github.io/">More games from Stilotto</a>
+    <button id="btnReset" class="linkbtn">Reset save</button>
+  </footer>
+</section>
+
+<!-- ============ results ============ -->
+<section id="results" class="screen modal" hidden>
+  <div class="card" id="resCard"></div>
+</section>
+
+<!-- ============ pause ============ -->
+<section id="pause" class="screen modal" hidden>
+  <div class="card small">
+    <h2>Paused</h2>
+    <button id="btnResume" class="btn primary">Resume</button>
+    <button id="btnAbort" class="btn">Abandon run</button>
+    <p class="fine">Abandoning keeps everything collected so far.</p>
+  </div>
+</section>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
