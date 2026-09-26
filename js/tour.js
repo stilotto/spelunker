@@ -15,8 +15,8 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = k => k * k * (3 - 2 * k);
 const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-// station-view advice timing (seconds) and drift speed (px/s), matching the hangar readouts
-const TALK_IN = 1.1, TALK_OUT = 1.8, TALK_GAP = 0.6, TALK_RISE = 20;
+// station-view advice timing (seconds) , matching the hangar readouts (but no drift)
+const TALK_IN = 1.1, TALK_OUT = 1.8, TALK_GAP = 0.6;
 const HOLD = 3.4, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
 const RAIN = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ2345789ﾊﾋﾌﾍﾎ';
 
@@ -354,7 +354,7 @@ export class Tour {
   }
 
   // Advice floats beside the chair like the hangar stat readouts: eased
-  // fade-in, hold, then fade out while drifting up; then the next line,
+  // fade-in, hold, then fade out in place; then the next line,
   // on the other side (wide screens) or the same side (narrow).
   talkBeside(cx, floorY, chairH, col, crewId, narrow) {
     const ctx = this.ctx, w = this.w, t = this.t;
@@ -380,7 +380,7 @@ export class Tour {
     if (!T.wrapped || T.maxW !== maxW) { T.wrapped = wrap(ctx, T.line, maxW - 10); T.maxW = maxW; }
     const lh = 19, textH = 18 + T.wrapped.length * lh;
     const hy = floorY - 40 - ch * 0.95 + ch * 0.3;              // hologram head height
-    const y0 = hy - textH / 2 - Math.min(out, TALK_OUT) * TALK_RISE;
+    const y0 = hy - textH / 2;
     const tx = T.side > 0 ? edge + 10 : edge - 10;
     // colours carry the fade (iPhone WebKit ignores globalAlpha on glowing text)
     ctx.save();
