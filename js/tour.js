@@ -15,7 +15,9 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = k => k * k * (3 - 2 * k);
 const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-const HOLD = 3.4, HOLD_TALK = 5.6, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
+// station-view advice timing (seconds) and drift speed (px/s), matching the hangar readouts
+const TALK_IN = 1.1, TALK_OUT = 1.8, TALK_GAP = 0.6, TALK_RISE = 20;
+const HOLD = 3.4, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
 const RAIN = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ2345789ﾊﾋﾌﾍﾎ';
 
 // Walk order: in through the bridge, finish at the reactor (the heart of the ship).
@@ -50,17 +52,15 @@ export class Tour {
     const pr = $('#preview').getBoundingClientRect();
     this.from = { x: pr.left + pr.width / 2, y: pr.top + pr.height * 0.44, R: Math.min(pr.width, pr.height) * 0.2 };
     // timeline
-    // each online AI has something to say about the last run
-    this.lines = TOUR.map(r => this.crew.includes(r.crew) ? advise(S, r.crew) : null);
-    save(S);
     const ph = [{ k: 'in', d: this.rm ? 0.6 : ZOOM_IN }];
     TOUR.forEach((_, i) => {
       if (i) ph.push({ k: 'pan', from: i - 1, to: i, d: this.rm ? 0.35 : PAN });
-      ph.push({ k: 'room', i, d: this.lines[i] ? HOLD_TALK : HOLD });
+      ph.push({ k: 'room', i, d: HOLD });
     });
     ph.push({ k: 'out', d: this.rm ? 0.6 : ZOOM_OUT });
     this.single = crewId ? TOUR.findIndex(r => r.crew === crewId) : -1;
     if (this.single >= 0) ph.splice(0, ph.length, { k: 'room', i: this.single, d: Infinity });
+    this.talk = null; // station view only: the AI's advice, one line at a time
     let t = 0; for (const p of ph) { p.t0 = t; t += p.d; }
     this.phases = ph; this.total = t;
     const skip = $('#tourSkip');
@@ -187,16 +187,11 @@ export class Tour {
 
     // layout: monitor wall on top, crew chair below
     const chairH = Math.min(h * 0.36, 300, w * 0.7);
-    // speech panel sits between the monitor wall and the chair
-    const say = this.lines && this.lines[i];
-    let wrapped = [], sayH = 0;
-    const sayW = Math.min(w - 32, 560);
-    if (say) {
-      ctx.font = '500 13.5px Inter, sans-serif';
-      wrapped = wrap(ctx, say, sayW - 28);
-      sayH = wrapped.length * 19 + 36;
-    }
-    const wallTop = 70, wallBot = floorY - chairH - 8 - (say ? sayH + 12 : 0);
+    const wallTop = 70, wallBot = floorY - chairH - 8;
+    // in the station view the AI talks beside its chair; on narrow screens
+    // the chair slides left so the words have room on the right
+    const talking = this.single === i && online;
+    const chairX = talking && w < 640 ? w * 0.27 : w / 2;
     const scr = this.screens[i];
     const cols = w > 900 ? 4 : w > 560 ? 3 : 2;
     const rows = Math.ceil(scr.length / cols);
@@ -212,8 +207,8 @@ export class Tour {
       this.screen(x, y, cw, chh, s, col, bt - 0.15 - j * 0.12, j + i * 10);
     });
 
-    this.chair(w / 2, floorY, chairH, col, online, R, bt);
-    if (say) this.speech((w - sayW) / 2, wallBot + 8, sayW, sayH, wrapped, CREW[R.crew].name, col, bt);
+    this.chair(chairX, floorY, chairH, col, online, R, bt);
+    if (talking) this.talkBeside(chairX, floorY, chairH, col, R.crew, w < 640);
     ctx.restore();
   }
 
@@ -358,32 +353,46 @@ export class Tour {
     }
   }
 
-  // Typewritten speech panel with a tail pointing down at the hologram.
-  speech(x, y, w, h, lines, name, col, bt) {
-    const ctx = this.ctx;
-    const a = clamp((bt - 0.7) / 0.3, 0, 1);
+  // Advice floats beside the chair like the hangar stat readouts: eased
+  // fade-in, hold, then fade out while drifting up; then the next line,
+  // on the other side (wide screens) or the same side (narrow).
+  talkBeside(cx, floorY, chairH, col, crewId, narrow) {
+    const ctx = this.ctx, w = this.w, t = this.t;
+    let T = this.talk;
+    if (!T || t >= T.t0 + T.life) {
+      const line = advise(this.S, crewId);
+      save(this.S);
+      const side = narrow ? 1 : T ? -T.side : (Math.random() < 0.5 ? -1 : 1);
+      T = this.talk = { line, side, t0: T ? t : t + 0.9, hold: 2.8 + line.length / 24, wrapped: null };
+      T.life = TALK_IN + T.hold + TALK_OUT + TALK_GAP;
+    }
+    const lt = t - T.t0;
+    if (lt < 0) return;
+    const k = Math.min(1, lt / TALK_IN), fadeIn = k * k * (3 - 2 * k);
+    const out = Math.max(0, lt - TALK_IN - T.hold);
+    const a = Math.max(0, Math.min(fadeIn, 1 - out / TALK_OUT));
     if (a <= 0) return;
+
+    const ch = chairH - 44, margin = ch * 0.36 + 14;
+    const edge = T.side > 0 ? cx + margin : cx - margin;
+    const maxW = Math.min(340, T.side > 0 ? w - 16 - edge : edge - 16);
+    ctx.font = '500 13.5px Inter, sans-serif';
+    if (!T.wrapped || T.maxW !== maxW) { T.wrapped = wrap(ctx, T.line, maxW - 10); T.maxW = maxW; }
+    const lh = 19, textH = 18 + T.wrapped.length * lh;
+    const hy = floorY - 40 - ch * 0.95 + ch * 0.3;              // hologram head height
+    const y0 = hy - textH / 2 - Math.min(out, TALK_OUT) * TALK_RISE;
+    const tx = T.side > 0 ? edge + 10 : edge - 10;
+    // colours carry the fade (iPhone WebKit ignores globalAlpha on glowing text)
     ctx.save();
-    ctx.globalAlpha *= a;
-    ctx.fillStyle = 'rgba(8,12,18,0.92)'; ctx.strokeStyle = hexA(col, 0.7); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + w / 2 - 9, y + h); ctx.lineTo(x + w / 2, y + h + 10); ctx.lineTo(x + w / 2 + 9, y + h);
-    ctx.fillStyle = 'rgba(8,12,18,0.92)'; ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(8,12,18,1)'; ctx.fillRect(x + w / 2 - 8, y + h - 2, 16, 3);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = hexA(col, 1); ctx.font = '700 11px "Chakra Petch", sans-serif';
-    ctx.fillText(`${name} ▸`, x + 14, y + 18);
-    // typewriter: reveal characters over time, with a blinking cursor
-    let left = Math.max(0, Math.floor((bt - 0.9) * 48));
-    ctx.font = '500 13.5px Inter, sans-serif'; ctx.fillStyle = '#dfe7f0';
-    let cx = 0, cy = 0;
-    lines.forEach((ln, k) => {
-      if (left <= 0) return;
-      const shown = ln.slice(0, left); left -= ln.length + 1;
-      ctx.fillText(shown, x + 14, y + 38 + k * 19);
-      cx = x + 14 + ctx.measureText(shown).width; cy = y + 38 + k * 19;
-    });
-    if (cy && Math.sin(this.t * 10) > 0) { ctx.fillStyle = hexA(col, 0.9); ctx.fillRect(cx + 2, cy - 11, 7, 13); }
+    ctx.textAlign = T.side > 0 ? 'left' : 'right';
+    ctx.fillStyle = hexA(col, 0.85 * a);
+    ctx.font = '600 10.5px "Chakra Petch", sans-serif';
+    ctx.fillText(CREW[crewId].name.split('').join(String.fromCharCode(8202)), tx, y0 + 10);
+    ctx.fillStyle = hexA('#e3ecf5', 0.95 * a);
+    ctx.font = '500 13.5px Inter, sans-serif';
+    T.wrapped.forEach((ln, n) => ctx.fillText(ln, tx, y0 + 30 + n * lh));
+    ctx.fillStyle = hexA(col, 0.5 * a);
+    ctx.fillRect(edge - 1, y0, 2, textH + 4);                   // bracket tick on the chair side
     ctx.restore();
   }
 
