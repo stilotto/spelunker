@@ -12,20 +12,52 @@ const $ = s => document.querySelector(s);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
 const TAU = Math.PI * 2;
 
+// Dock icons: small sci-fi glyphs, each with its own colour (dimmed when not selected).
+const ICONS = {
+  ship: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M10 18 H22 L16 30 Z" fill="#c9d3e0"/><path d="M12.5 21 H19.5 M14 24.5 H18" stroke="#2a2f38" stroke-width="1.6"/>
+    <circle cx="16" cy="13" r="9" fill="#2f3a4a" stroke="#8796ab" stroke-width="1.6"/>
+    <circle cx="16" cy="13" r="5" fill="#0b1522" stroke="#6fe3ff" stroke-width="1.4"/>
+    <circle cx="16" cy="13" r="2" fill="#ffbe5a"/><path d="M16 4 V1" stroke="#aef7ff" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  upgrades: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M16 3 L27 9.5 V22.5 L16 29 L5 22.5 V9.5 Z" fill="#3a2a0c" stroke="#ffd36b" stroke-width="1.6"/>
+    <path d="M10 18 L16 12 L22 18" fill="none" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10 23 L16 17 L22 23" fill="none" stroke="#fff0bf" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>`,
+  research: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#b18cff" stroke-width="1.6"/>
+    <ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#b18cff" stroke-width="1.6" transform="rotate(60 16 16)"/>
+    <ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#6fe3ff" stroke-width="1.6" transform="rotate(-60 16 16)"/>
+    <circle cx="16" cy="16" r="3.2" fill="#e6d9ff"/><circle cx="28.5" cy="16" r="1.8" fill="#6fe3ff"/></svg>`,
+  crew: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M16 2 V6" stroke="#6cff9a" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="2.5" r="1.8" fill="#6cff9a"/>
+    <rect x="6" y="6" width="20" height="16" rx="6" fill="#12281c" stroke="#6cff9a" stroke-width="1.6"/>
+    <rect x="9.5" y="11" width="13" height="5" rx="2.5" fill="#6cff9a"/><circle cx="13" cy="13.5" r="1.2" fill="#0b1119"/><circle cx="19" cy="13.5" r="1.2" fill="#0b1119"/>
+    <path d="M7 30 Q16 21 25 30" fill="none" stroke="#6cff9a" stroke-width="1.6" opacity=".7"/></svg>`,
+  relics: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M16 2 L24 12 L16 30 L8 12 Z" fill="#3a0f2c" stroke="#ff7ad9" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M8 12 H24 M16 2 L13 12 L16 30 L19 12 Z" fill="none" stroke="#ff7ad9" stroke-width="1.1" opacity=".75"/>
+    <path d="M26 4 L27 6.5 L29.5 7.5 L27 8.5 L26 11 L25 8.5 L22.5 7.5 L25 6.5 Z" fill="#ffd3f1"/></svg>`,
+};
+
 export class Hangar {
   constructor(S, { onLaunch }) {
     this.S = S;
     this.onLaunch = onLaunch;
-    this.tab = 'upgrades';
+    this.tab = 'ship';
+    this.narrow = matchMedia('(max-width: 820px)');
+    this.narrow.addEventListener?.('change', () => this.render());
     this.t = 0;
     this.prev = new Renderer($('#preview'));
     this.lastXp = {};
     $('#tabs').addEventListener('click', e => {
       const b = e.target.closest('[data-tab]'); if (!b) return;
+      if (this.tab === b.dataset.tab) return;
       this.tab = b.dataset.tab; this.render();
+      $('#hangar').scrollTop = 0;
     });
     $('#tabBody').addEventListener('click', e => this.click(e));
     $('#btnLaunch').addEventListener('click', () => this.onLaunch());
+    $('#btnLaunchTop').addEventListener('click', () => this.onLaunch());
     $('#massPrev').addEventListener('click', () => this.setMass(-1));
     $('#massNext').addEventListener('click', () => this.setMass(1));
     // tap a currency to learn what it is
@@ -108,15 +140,20 @@ export class Hangar {
     // tabs
     const keys = Object.keys(this.keys());
     const newIn = p => keys.some(k => k.startsWith(p) && this.isNew(k));
-    const tabs = [['upgrades', 'Upgrades', 'u:']];
+    const tabs = [['ship', 'Ship', null], ['upgrades', 'Upgrades', 'u:']];
     if (visibleResearch(S).length) tabs.push(['research', 'Research', 'r:']);
     tabs.push(['crew', 'Crew', 'c:']);
     if (this.relicsOn()) tabs.push(['relics', 'Relics', 'x:']);
-    if (!tabs.some(t => t[0] === this.tab)) this.tab = 'upgrades';
+    if (!tabs.some(t => t[0] === this.tab)) this.tab = 'ship';
+    // on wide screens the ship bay is always visible, so "Ship" means upgrades
+    const view = this.tab === 'ship' && !this.narrow.matches ? 'upgrades' : this.tab;
     $('#tabs').innerHTML = tabs.map(([id, name, p]) =>
-      `<button class="tab ${this.tab === id ? 'on' : ''}" data-tab="${id}">${name}${newIn(p) ? '<i class="dot"></i>' : ''}</button>`).join('');
+      `<button class="${view === id ? 'on' : ''}" data-tab="${id}" aria-label="${name}">${ICONS[id]}<small>${name}</small>${p && newIn(p) ? '<i class="dot"></i>' : ''}</button>`).join('');
+    $('.hgrid').classList.toggle('v-ship', view === 'ship');
+    $('#hangar').classList.toggle('v-ship', view === 'ship');
+    if (view === 'ship') { $('#tabBody').innerHTML = ''; return; }
 
-    const body = { upgrades: () => this.upgrades(), research: () => this.research(), crew: () => this.crew(), relics: () => this.relics() }[this.tab]();
+    const body = { upgrades: () => this.upgrades(), research: () => this.research(), crew: () => this.crew(), relics: () => this.relics() }[view]();
     $('#tabBody').innerHTML = body;
   }
 
