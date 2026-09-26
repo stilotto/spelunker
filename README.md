@@ -19,4 +19,5 @@ Plain ES modules, no build step. Serve the folder with any static server.
 - `js/run.js`: one descent, pure simulation (runs headless in Node)
 - `js/render.js`: canvas drawing
 - `js/hangar.js`: between-run UI
+- `js/tour.js`: tap-the-ship tour of the rooms
 - `js/main.js`: loop, screens, HUD

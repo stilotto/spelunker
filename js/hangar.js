@@ -7,6 +7,7 @@ import {
 import { Renderer } from './render.js';
 import { ROOMS } from './run.js';
 import { sfx } from './audio.js';
+import { Tour } from './tour.js';
 
 const $ = s => document.querySelector(s);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
@@ -61,6 +62,8 @@ export class Hangar {
     $('#tabBody').addEventListener('click', e => this.click(e));
     $('#btnLaunch').addEventListener('click', () => this.onLaunch());
     $('#btnLaunchTop').addEventListener('click', () => this.onLaunch());
+    this.tour = new Tour(this);
+    $('#preview').addEventListener('click', () => { if (!this.tour.active) this.tour.open(); });
     $('#massPrev').addEventListener('click', () => this.setMass(-1));
     $('#massNext').addEventListener('click', () => this.setMass(1));
     // tap a currency to learn what it is
@@ -284,6 +287,7 @@ export class Hangar {
   // ---------------------------------------------------------- animated preview
   tick(dt) {
     this.t += dt;
+    if (this.tour.active) { this.tour.tick(dt); return; }
     const r = this.prev, cv = r.cv;
     if (cv.clientWidth && (Math.abs(cv.clientWidth - r.w) > 1 || Math.abs(cv.clientHeight - r.h) > 1)) r.resize();
     const ctx = r.ctx, w = r.w, h = r.h, d = r.dpr;
@@ -306,22 +310,9 @@ export class Hangar {
     ctx.beginPath(); ctx.moveTo(w * 0.1, h * 0.46); ctx.lineTo(w * 0.28, h * 0.46); ctx.moveTo(w * 0.9, h * 0.46); ctx.lineTo(w * 0.72, h * 0.46); ctx.stroke();
 
     const R = Math.min(w, h) * 0.2, x = w / 2, y = h * 0.44 + Math.sin(this.t * 1.3) * 4;
-    const n = st.turrets;
-    const turrets = Array.from({ length: n }, (_, i) => {
-      const a = n === 1 ? Math.PI / 2 : (i / n) * TAU - Math.PI / 2 + this.t * 0.15;
-      return { a, aim: a + Math.sin(this.t + i) * 0.4, recoil: 0 };
-    });
-    const bots = Array.from({ length: st.bots }, (_, i) => {
-      const a = this.t * 0.8 + i * 2.1;
-      return { x: Math.cos(a) * 0.14, y: Math.sin(a) * 0.14, hp: 1, hit: 0 };
-    });
     const sR = R / 70; // drawVessel draws in hull-radius terms; scale line widths via transform
     ctx.save(); ctx.translate(x, y); ctx.scale(sR, sR);
-    r.drawVessel(ctx, 0, 0, 70, {
-      t: this.t, spin: this.t, vx: Math.sin(this.t * 0.7) * 120, vy: 200, ramming: false, hullK: 1,
-      shieldK: st.shieldMax ? 1 : 0, shieldT: 0, hit: 0, turrets, rooms: ROOMS.map(q => ({ ...q, sab: 0 })),
-      boarders: [], bots, crew: crewUnlocked(S), od: false, heat: 0, accent: m.pal.accent, pods: [], shieldOn: st.shieldMax > 0,
-    });
+    r.drawVessel(ctx, 0, 0, 70, this.vesselOpts(this.t));
     for (let i = 0; i < st.wingmen; i++) {
       const a = this.t * 1.1 + (i / st.wingmen) * TAU;
       const wx = Math.cos(a) * 128, wy = Math.sin(a) * 110;
@@ -330,6 +321,25 @@ export class Hangar {
     }
     ctx.restore();
     this.drawReadout(ctx, w, h, dt);
+  }
+
+  // Preview ship pose. `still` drops the sway so the tour can zoom precisely.
+  vesselOpts(t, still) {
+    const S = this.S, st = computeStats(S), m = MASSES[S.mass];
+    const n = st.turrets;
+    const turrets = Array.from({ length: n }, (_, i) => {
+      const a = n === 1 ? Math.PI / 2 : (i / n) * TAU - Math.PI / 2 + t * 0.15;
+      return { a, aim: a + Math.sin(t + i) * 0.4, recoil: 0 };
+    });
+    const bots = Array.from({ length: st.bots }, (_, i) => {
+      const a = t * 0.8 + i * 2.1;
+      return { x: Math.cos(a) * 0.14, y: Math.sin(a) * 0.14, hp: 1, hit: 0 };
+    });
+    return {
+      t, spin: t, vx: still ? 0 : Math.sin(t * 0.7) * 120, vy: 200, ramming: false, hullK: 1,
+      shieldK: st.shieldMax ? 1 : 0, shieldT: 0, hit: 0, turrets, rooms: ROOMS.map(q => ({ ...q, sab: 0 })),
+      boarders: [], bots, crew: crewUnlocked(S), od: false, heat: 0, accent: m.pal.accent, pods: [], shieldOn: st.shieldMax > 0,
+    };
   }
 
   // One stat at a time fades in beside the ship, then out, in a new random spot.

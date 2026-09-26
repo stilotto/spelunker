@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20260926191250">
+<link rel="stylesheet" href="css/style.css?v=20260926192319">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M9 19 L23 19 L16 31 Z' fill='%23aab6c8'/%3E%3Ccircle cx='16' cy='14' r='10' fill='%232f3a4a' stroke='%238796ab' stroke-width='2'/%3E%3Ccircle cx='16' cy='14' r='5' fill='%236fe3ff'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -85,7 +85,7 @@
         <div class="massname"><small id="massKind">Molten world</small><b id="massName">CINDER</b></div>
         <button id="massNext" class="icon-btn" aria-label="Next target">›</button>
       </div>
-      <canvas id="preview" class="preview" aria-hidden="true"></canvas>
+      <div class="prevwrap"><canvas id="preview" class="preview" role="button" aria-label="Tour the ship"></canvas><span class="prevhint">Tap ship to tour</span></div>
       <p id="massBlurb" class="blurb"></p>
       <div class="progress">
         <div class="ptrack"><i id="pBest"></i><span id="pBestLbl"></span></div>
@@ -105,6 +105,13 @@
   <nav class="dock" id="tabs" aria-label="Hangar sections"></nav>
 </section>
 
+<!-- ============ ship tour ============ -->
+<section id="tour" class="tour" hidden>
+  <canvas id="tourCv" aria-label="Tour of the Spelunker's rooms"></canvas>
+  <button id="tourSkip" class="btn tour-skip">Skip ✕</button>
+  <div id="tourHint" class="tour-hint">Tap for the next room</div>
+</section>
+
 <!-- ============ results ============ -->
 <section id="results" class="screen modal" hidden>
   <div class="card" id="resCard"></div>
@@ -122,15 +129,16 @@
 
 <script type="importmap">{
   "imports": {
-    "./js/audio.js": "./js/audio.js?v=20260926191250",
-    "./js/data.js": "./js/data.js?v=20260926191250",
-    "./js/hangar.js": "./js/hangar.js?v=20260926191250",
-    "./js/input.js": "./js/input.js?v=20260926191250",
-    "./js/render.js": "./js/render.js?v=20260926191250",
-    "./js/run.js": "./js/run.js?v=20260926191250",
-    "./js/state.js": "./js/state.js?v=20260926191250"
+    "./js/audio.js": "./js/audio.js?v=20260926192319",
+    "./js/data.js": "./js/data.js?v=20260926192319",
+    "./js/hangar.js": "./js/hangar.js?v=20260926192319",
+    "./js/input.js": "./js/input.js?v=20260926192319",
+    "./js/render.js": "./js/render.js?v=20260926192319",
+    "./js/run.js": "./js/run.js?v=20260926192319",
+    "./js/state.js": "./js/state.js?v=20260926192319",
+    "./js/tour.js": "./js/tour.js?v=20260926192319"
   }
 }</script>
-<script type="module" src="js/main.js?v=20260926191250"></script>
+<script type="module" src="js/main.js?v=20260926192319"></script>
 </body>
 </html>

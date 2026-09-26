@@ -351,3 +351,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .preview { max-height: 200px; }
   .blurb { font-size: 12.5px; }
 }
+
+/* ---------- ship tour ---------- */
+.preview { cursor: zoom-in; }
+.prevwrap { position: relative; }
+.prevhint {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); pointer-events: none;
+  font: 600 10px/1 "Chakra Petch", sans-serif; letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(111,227,255,.7); background: rgba(5,7,10,.6); padding: 5px 8px; border-radius: 6px; white-space: nowrap;
+}
+.tour { position: fixed; inset: 0; z-index: 40; }
+.tour canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: manipulation; }
+.tour-skip { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; padding: 9px 14px; font-size: 13px; background: rgba(15,20,28,.85); }
+.tour-hint {
+  position: absolute; left: 50%; bottom: calc(12px + var(--safe-b)); transform: translateX(-50%); pointer-events: none;
+  font: 500 11px/1 Inter, sans-serif; color: #8d99ab; letter-spacing: .06em; white-space: nowrap;
+}
