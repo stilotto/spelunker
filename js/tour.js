@@ -15,7 +15,7 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = k => k * k * (3 - 2 * k);
 const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-// station-view advice timing (seconds) , matching the hangar readouts (but no drift)
+// station-view advice timing (seconds), like the hangar readouts but without the drift
 const TALK_IN = 1.1, TALK_OUT = 1.8, TALK_GAP = 0.6;
 const HOLD = 3.4, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
 const RAIN = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ2345789ﾊﾋﾌﾍﾎ';
