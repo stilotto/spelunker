@@ -1,5 +1,5 @@
 // Boot, game loop, screen flow, HUD.
-import { M, MASSES, ENEMIES, CREW } from './data.js';
+import { M, MASSES, ENEMIES, CREW, upgradeCost } from './data.js';
 import { load, save, wipe, computeStats, crewUnlocked, addCrewXp, visibleUpgrades, visibleResearch } from './state.js';
 import { Run } from './run.js';
 import { Renderer } from './render.js';
@@ -180,8 +180,16 @@ function updateHud(dt) {
 // ---------------------------------------------------------------- end of run
 function snapshot() {
   const out = {};
-  for (const u of visibleUpgrades(S)) out['u:' + u.id] = u.name;
-  for (const r of visibleResearch(S)) out['r:' + r.id] = r.name + ' (research)';
+  for (const u of visibleUpgrades(S)) out['u:' + u.id] = {
+    name: u.name, kind: 'Upgrade',
+    body: `${u.desc} per level. Starts at ${u.fmt(0)}.`,
+    cost: `<span style="color:var(--gold)">⬡ ${fmt(upgradeCost(u, 0))}</span> for level 1 · up to level ${u.max}`,
+  };
+  for (const r of visibleResearch(S)) out['r:' + r.id] = {
+    name: r.name, kind: 'Research',
+    body: r.desc,
+    cost: `<span style="color:var(--violet)">◈ ${fmt(r.cost)}</span> Data${r.req ? ' · needs earlier research first' : ''}`,
+  };
   return out;
 }
 
@@ -228,8 +236,8 @@ function endRun() {
       ${res.boarded ? `<div class="res-row"><span>Boarders repelled</span><b>${res.repelled} / ${res.boarded}</b></div>` : ''}
     </div>
     ${crewLines.length ? `<div class="res-sec">Crew uplink (skills saved)</div><div class="res-crew">${crewLines.join('')}</div>` : ''}
-    ${unlockedMass ? `<div class="res-sec">New target</div><div class="reveal"><div><b>${unlockedMass.name}</b> · ${unlockedMass.kind}. Relics are now online.</div></div>` : ''}
-    ${revealed.length ? `<div class="res-sec">Newly revealed</div><div class="reveal">${revealed.map(n => `<div><b>${n}</b></div>`).join('')}</div>` : ''}
+    ${unlockedMass ? `<div class="res-sec">New target</div><div class="reveal"><div class="target"><b>${unlockedMass.name}</b> · ${unlockedMass.kind}. Relics are now online.</div></div>` : ''}
+    ${revealed.length ? `<div class="res-sec">Newly revealed</div><div class="reveal">${revealed.map(n => `<details><summary><b>${n.name}</b><small>${n.kind}</small></summary><p>${n.body}</p><p class="rcost">${n.cost}</p></details>`).join('')}</div><p class="fine">Tap one to see what it does.</p>` : ''}
     <div class="res-actions"><button id="btnHangar" class="btn primary big">Return to hangar</button></div>`;
   mode = 'results';
   show('results');
