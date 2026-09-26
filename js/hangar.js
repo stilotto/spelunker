@@ -39,6 +39,9 @@ const ICONS = {
     <path d="M26 4 L27 6.5 L29.5 7.5 L27 8.5 L26 11 L25 8.5 L22.5 7.5 L25 6.5 Z" fill="#ffd3f1"/></svg>`,
 };
 
+// Bay grid scroll speed (px/s) and the stat readout's timing (seconds).
+const GRID_RISE = 20, RO_IN = 0.5, RO_HOLD = 2.4, RO_OUT = 0.9, RO_GAP = 0.35;
+
 export class Hangar {
   constructor(S, { onLaunch }) {
     this.S = S;
@@ -290,7 +293,7 @@ export class Hangar {
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     // bay grid
     ctx.strokeStyle = 'rgba(111,227,255,0.07)'; ctx.lineWidth = 1;
-    const off = (this.t * 20) % 24;
+    const off = (this.t * GRID_RISE) % 24;
     for (let y = -off; y < h; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
     for (let x = 0; x < w; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     const cg = ctx.createRadialGradient(w / 2, h * 1.1, 10, w / 2, h * 1.1, h);
@@ -335,28 +338,31 @@ export class Hangar {
       let i; do { i = (Math.random() * list.length) | 0; } while (list.length > 1 && ro && list[i][0] === ro.label);
       const left = ro ? !ro.left : Math.random() < 0.5;
       ro = this.ro = {
-        label: list[i][0], value: list[i][1], left, t: 0, life: 2.6,
+        label: list[i][0], value: list[i][1], left, t: 0, life: RO_IN + RO_HOLD + RO_OUT + RO_GAP,
         x: left ? w * (0.04 + Math.random() * 0.05) : w * (0.96 - Math.random() * 0.05),
         y: h * (0.12 + Math.random() * 0.74),
       };
     }
     ro.t += dt;
-    const a = Math.min(1, ro.t / 0.35, (ro.life - ro.t) / 0.6);
+    // fade in, hold steady, then fade out while drifting up with the bay grid
+    const out = Math.max(0, ro.t - RO_IN - RO_HOLD);
+    const a = Math.max(0, Math.min(1, ro.t / RO_IN, 1 - out / RO_OUT));
     if (a <= 0) return;
+    const y = ro.y - Math.min(out, RO_OUT) * GRID_RISE;
     ctx.save();
     ctx.globalAlpha = a;
     ctx.textAlign = ro.left ? 'left' : 'right';
     ctx.shadowColor = 'rgba(111,227,255,0.8)'; ctx.shadowBlur = 8;
     ctx.fillStyle = 'rgba(111,227,255,0.75)';
     ctx.font = '600 10px "Chakra Petch", sans-serif';
-    ctx.fillText(ro.label.toUpperCase().split('').join(String.fromCharCode(8202)), ro.x, ro.y);
+    ctx.fillText(ro.label.toUpperCase().split('').join(String.fromCharCode(8202)), ro.x, y);
     ctx.fillStyle = '#b4f3ff';
     ctx.font = '700 17px "Chakra Petch", sans-serif';
-    ctx.fillText(ro.value, ro.x, ro.y + 19);
+    ctx.fillText(ro.value, ro.x, y + 19);
     // a short bracket tick toward the ship
     ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(111,227,255,0.5)'; ctx.lineWidth = 1;
     const bx = ro.left ? ro.x - 3 : ro.x + 3;
-    ctx.beginPath(); ctx.moveTo(bx, ro.y - 9); ctx.lineTo(bx, ro.y + 23); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx, y - 9); ctx.lineTo(bx, y + 23); ctx.stroke();
     ctx.restore();
   }
 }
