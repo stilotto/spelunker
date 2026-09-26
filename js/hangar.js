@@ -243,7 +243,7 @@ export class Hangar {
   crew() {
     const S = this.S;
     let html = `<section class="group"><h3>AI crew · skills persist over the Ansible link</h3>
-      <p class="note">Crew earn XP free on every run. <b>Sim-train</b> gives the same XP instantly, paid in Data instead. Data also buys research, so train when you have Data to spare or an AI is falling behind. Tap a portrait to visit their station.</p>
+      <p class="note">Crew earn XP free on every run. <b>Sim-train</b> gives the same XP instantly, paid in Data instead. Data also buys research, so train when you have Data to spare or an AI is falling behind. Tap a portrait to visit their station and hear what they think you should upgrade.</p>
       <div class="items">`;
     for (const id of crewUnlocked(S)) {
       const c = S.crew[id], d = CREW[id];

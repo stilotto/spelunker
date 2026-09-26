@@ -20,4 +20,5 @@ Plain ES modules, no build step. Serve the folder with any static server.
 - `js/render.js`: canvas drawing
 - `js/hangar.js`: between-run UI
 - `js/tour.js`: tap-the-ship tour of the rooms
+- `js/voices.js`: crew advice lines and the logic that picks them
 - `js/main.js`: loop, screens, HUD

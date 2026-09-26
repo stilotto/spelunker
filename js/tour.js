@@ -2,7 +2,8 @@
 // through each room. Wall monitors show that room's systems; the room's AI
 // sits in its chair as a hologram of its crew-panel portrait.
 import { CREW, MASSES, UPGRADES, RESEARCH, RELICS } from './data.js';
-import { lvl, has, relic, computeStats, crewUnlocked, visibleResearch } from './state.js';
+import { lvl, has, relic, computeStats, crewUnlocked, visibleResearch, save } from './state.js';
+import { advise } from './voices.js';
 import { ROOMS } from './run.js';
 import { reducedMotion } from './render.js';
 import { sfx } from './audio.js';
@@ -14,7 +15,7 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = k => k * k * (3 - 2 * k);
 const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-const HOLD = 3.4, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
+const HOLD = 3.4, HOLD_TALK = 5.6, PAN = 0.9, ZOOM_IN = 1.7, ZOOM_OUT = 1.4;
 const RAIN = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ2345789ﾊﾋﾌﾍﾎ';
 
 // Walk order: in through the bridge, finish at the reactor (the heart of the ship).
@@ -49,10 +50,13 @@ export class Tour {
     const pr = $('#preview').getBoundingClientRect();
     this.from = { x: pr.left + pr.width / 2, y: pr.top + pr.height * 0.44, R: Math.min(pr.width, pr.height) * 0.2 };
     // timeline
+    // each online AI has something to say about the last run
+    this.lines = TOUR.map(r => this.crew.includes(r.crew) ? advise(S, r.crew) : null);
+    save(S);
     const ph = [{ k: 'in', d: this.rm ? 0.6 : ZOOM_IN }];
     TOUR.forEach((_, i) => {
       if (i) ph.push({ k: 'pan', from: i - 1, to: i, d: this.rm ? 0.35 : PAN });
-      ph.push({ k: 'room', i, d: HOLD });
+      ph.push({ k: 'room', i, d: this.lines[i] ? HOLD_TALK : HOLD });
     });
     ph.push({ k: 'out', d: this.rm ? 0.6 : ZOOM_OUT });
     this.single = crewId ? TOUR.findIndex(r => r.crew === crewId) : -1;
@@ -183,7 +187,16 @@ export class Tour {
 
     // layout: monitor wall on top, crew chair below
     const chairH = Math.min(h * 0.36, 300, w * 0.7);
-    const wallTop = 70, wallBot = floorY - chairH - 8;
+    // speech panel sits between the monitor wall and the chair
+    const say = this.lines && this.lines[i];
+    let wrapped = [], sayH = 0;
+    const sayW = Math.min(w - 32, 560);
+    if (say) {
+      ctx.font = '500 13.5px Inter, sans-serif';
+      wrapped = wrap(ctx, say, sayW - 28);
+      sayH = wrapped.length * 19 + 36;
+    }
+    const wallTop = 70, wallBot = floorY - chairH - 8 - (say ? sayH + 12 : 0);
     const scr = this.screens[i];
     const cols = w > 900 ? 4 : w > 560 ? 3 : 2;
     const rows = Math.ceil(scr.length / cols);
@@ -200,6 +213,7 @@ export class Tour {
     });
 
     this.chair(w / 2, floorY, chairH, col, online, R, bt);
+    if (say) this.speech((w - sayW) / 2, wallBot + 8, sayW, sayH, wrapped, CREW[R.crew].name, col, bt);
     ctx.restore();
   }
 
@@ -344,6 +358,35 @@ export class Tour {
     }
   }
 
+  // Typewritten speech panel with a tail pointing down at the hologram.
+  speech(x, y, w, h, lines, name, col, bt) {
+    const ctx = this.ctx;
+    const a = clamp((bt - 0.7) / 0.3, 0, 1);
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.fillStyle = 'rgba(8,12,18,0.92)'; ctx.strokeStyle = hexA(col, 0.7); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w / 2 - 9, y + h); ctx.lineTo(x + w / 2, y + h + 10); ctx.lineTo(x + w / 2 + 9, y + h);
+    ctx.fillStyle = 'rgba(8,12,18,0.92)'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(8,12,18,1)'; ctx.fillRect(x + w / 2 - 8, y + h - 2, 16, 3);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = hexA(col, 1); ctx.font = '700 11px "Chakra Petch", sans-serif';
+    ctx.fillText(`${name} ▸`, x + 14, y + 18);
+    // typewriter: reveal characters over time, with a blinking cursor
+    let left = Math.max(0, Math.floor((bt - 0.9) * 48));
+    ctx.font = '500 13.5px Inter, sans-serif'; ctx.fillStyle = '#dfe7f0';
+    let cx = 0, cy = 0;
+    lines.forEach((ln, k) => {
+      if (left <= 0) return;
+      const shown = ln.slice(0, left); left -= ln.length + 1;
+      ctx.fillText(shown, x + 14, y + 38 + k * 19);
+      cx = x + 14 + ctx.measureText(shown).width; cy = y + 38 + k * 19;
+    });
+    if (cy && Math.sin(this.t * 10) > 0) { ctx.fillStyle = hexA(col, 0.9); ctx.fillRect(cx + 2, cy - 11, 7, 13); }
+    ctx.restore();
+  }
+
   plate(cx, y, name, sub, col, a) {
     const ctx = this.ctx;
     ctx.textAlign = 'center';
@@ -433,4 +476,14 @@ export function aiIcon(ctx, x, y, size, col, a, t, ghost) {
 function hexA(hex, a) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${clamp(a, 0, 1).toFixed(3)})`;
+}
+
+function wrap(ctx, text, maxW) {
+  const out = []; let line = '';
+  for (const word of text.split(' ')) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW && line) { out.push(line); line = word; } else line = test;
+  }
+  if (line) out.push(line);
+  return out;
 }

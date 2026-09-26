@@ -44,6 +44,8 @@ export function recordRun(s, res) {
   for (const k of ['shieldAbs', 'armorBlocked', 'hullTaken', 'shots', 'missiles', 'lances', 'emps', 'ods', 'scrapes', 'pods', 'botsLost', 'caches', 'coolant', 'kits', 'stasisTime', 'overheatTime']) st[k] += T[k];
   st.repaired += res.repaired || 0;
   st.boarded += res.boarded; st.repelled += res.repelled;
+  // the crew AIs read this when they give advice in their rooms
+  s.lastRun = { depth: res.depth, mass: res.mass, killer: res.killer, victory: res.victory, time: res.time, kills: res.kills, repelled: res.repelled, boarded: res.boarded, repaired: res.repaired || 0, ...T };
   s.history = (s.history || []).concat({ n: s.runs, m: res.mass, d: res.depth, v: res.victory, k: res.killer, t: Math.round(res.time), s: res.salvage, x: res.kills }).slice(-40);
 }
 
