@@ -1,8 +1,8 @@
 // Between-run hangar: upgrades, research, crew, relics, target select.
-import { UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS } from './data.js';
+import { ENEMIES, CAUSES, UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS } from './data.js';
 import {
   lvl, has, relic, visibleUpgrades, visibleResearch, nextTeaser, researchAvailable,
-  crewUnlocked, trainCost, addCrewXp, buyUpgrade, buyResearch, buyRelic, computeStats, save,
+  freshStats, crewUnlocked, trainCost, addCrewXp, buyUpgrade, buyResearch, buyRelic, computeStats, save,
 } from './state.js';
 import { Renderer } from './render.js';
 import { ROOMS } from './run.js';
@@ -12,6 +12,8 @@ import { Tour } from './tour.js';
 const $ = s => document.querySelector(s);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
 const TAU = Math.PI * 2;
+const fmtTime = sec => { sec = Math.round(sec || 0); const h = (sec / 3600) | 0, m = ((sec % 3600) / 60) | 0, s = sec % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`; };
 
 // Dock icons: small sci-fi glyphs, each with its own colour (dimmed when not selected).
 const ICONS = {
@@ -34,6 +36,12 @@ const ICONS = {
     <rect x="6" y="6" width="20" height="16" rx="6" fill="#12281c" stroke="#6cff9a" stroke-width="1.6"/>
     <rect x="9.5" y="11" width="13" height="5" rx="2.5" fill="#6cff9a"/><circle cx="13" cy="13.5" r="1.2" fill="#0b1119"/><circle cx="19" cy="13.5" r="1.2" fill="#0b1119"/>
     <path d="M7 30 Q16 21 25 30" fill="none" stroke="#6cff9a" stroke-width="1.6" opacity=".7"/></svg>`,
+  stats: `<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M4 28 H28" stroke="#8d99ab" stroke-width="1.6" stroke-linecap="round"/>
+    <rect x="6" y="17" width="4.5" height="10" rx="1.5" fill="#6fe3ff" opacity=".55"/>
+    <rect x="13.75" y="9" width="4.5" height="18" rx="1.5" fill="#6fe3ff"/>
+    <rect x="21.5" y="13" width="4.5" height="14" rx="1.5" fill="#6fe3ff" opacity=".8"/>
+    <path d="M5 14 L12 7 L19 11 L27 4" fill="none" stroke="#ffd36b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   relics: `<svg viewBox="0 0 32 32" aria-hidden="true">
     <path d="M16 2 L24 12 L16 30 L8 12 Z" fill="#3a0f2c" stroke="#ff7ad9" stroke-width="1.6" stroke-linejoin="round"/>
     <path d="M8 12 H24 M16 2 L13 12 L16 30 L19 12 Z" fill="none" stroke="#ff7ad9" stroke-width="1.1" opacity=".75"/>
@@ -60,6 +68,10 @@ export class Hangar {
       $('#hangar').scrollTop = 0;
     });
     $('#tabBody').addEventListener('click', e => this.click(e));
+    // run-history chart: hover or tap a bar to read that run
+    const pick = e => { const r = e.target.closest('[data-run]'); if (r) this.showRun(+r.dataset.run); };
+    $('#tabBody').addEventListener('pointerover', pick);
+    $('#tabBody').addEventListener('pointerdown', pick);
     $('#btnLaunch').addEventListener('click', () => this.onLaunch());
     $('#btnLaunchTop').addEventListener('click', () => this.onLaunch());
     this.tour = new Tour(this);
@@ -154,6 +166,7 @@ export class Hangar {
     if (visibleResearch(S).length) tabs.push(['research', 'Research', 'r:']);
     tabs.push(['crew', 'Crew', 'c:']);
     if (this.relicsOn()) tabs.push(['relics', 'Relics', 'x:']);
+    if (S.runs > 0) tabs.push(['stats', 'Stats', null]);
     if (!tabs.some(t => t[0] === this.tab)) this.tab = 'ship';
     // on wide screens the ship bay is always visible, so "Ship" means upgrades
     const view = this.tab === 'ship' && !this.narrow.matches ? 'upgrades' : this.tab;
@@ -163,8 +176,10 @@ export class Hangar {
     $('#hangar').classList.toggle('v-ship', view === 'ship');
     if (view === 'ship') { $('#tabBody').innerHTML = ''; return; }
 
-    const body = { upgrades: () => this.upgrades(), research: () => this.research(), crew: () => this.crew(), relics: () => this.relics() }[view]();
+    this.afterRender = null;
+    const body = { upgrades: () => this.upgrades(), research: () => this.research(), crew: () => this.crew(), relics: () => this.relics(), stats: () => this.stats() }[view]();
     $('#tabBody').innerHTML = body;
+    if (this.afterRender) this.afterRender();
   }
 
   pips(l, max) {
@@ -262,6 +277,94 @@ export class Hangar {
         <button class="buy ${ok ? 'ok' : ''}" data-relic="${r.id}" ${ok ? '' : 'disabled'}>${maxed ? 'MAXED' : `<span class="cost k">✦</span>${c}`}</button></div>`;
     }
     return html + '</div></section>';
+  }
+
+  // ---------------------------------------------------------- stats
+  stats() {
+    const S = this.S, st = S.stats || freshStats(), H = S.history || [];
+    const bestAll = Math.max(0, ...Object.values(S.best));
+    const cores = Object.values(S.cleared).reduce((a, b) => a + b, 0);
+    const km = S.lifetime.depth >= 1000 ? `${(S.lifetime.depth / 1000).toFixed(1)} km` : `${fmt(S.lifetime.depth)} m`;
+    const tile = (label, val) => `<div class="stile"><small>${label}</small><b>${val}</b></div>`;
+    let html = `<section class="group"><h3>Career</h3><div class="stiles">
+      ${tile('Runs', fmt(S.runs))}${tile('Deepest dive', `${fmt(bestAll)} m`)}${tile('Total fallen', km)}
+      ${tile('Time falling', fmtTime(st.time))}${tile('Defenders destroyed', fmt(S.lifetime.kills))}${tile('Cores destroyed', fmt(cores))}
+    </div></section>`;
+
+    // depth of every recent run, oldest to newest
+    if (H.length) {
+      const W = 600, CH = 150, n = H.length, gap = n > 25 ? 2 : 4, bw = (W - gap * (n - 1)) / n;
+      const top = Math.max(...H.map(r => r.d), bestAll) * 1.12 || 1;
+      const y = d => CH - (d / top) * CH;
+      const bars = H.map((r, i) => {
+        const x = i * (bw + gap), h = Math.max(2, CH - y(r.d));
+        return `<g data-run="${i}" class="rbar${r.v ? ' win' : ''}${i === n - 1 ? ' on' : ''}">
+          <rect x="${x - gap / 2}" y="0" width="${bw + gap}" height="${CH}" fill="transparent"/>
+          <path d="M${x} ${CH} V${CH - h + Math.min(4, bw / 2)} Q${x} ${CH - h} ${x + Math.min(4, bw / 2)} ${CH - h} H${x + bw - Math.min(4, bw / 2)} Q${x + bw} ${CH - h} ${x + bw} ${CH - h + Math.min(4, bw / 2)} V${CH} Z"/>
+</g>`;
+      }).join('');
+      const by = y(bestAll);
+      html += `<section class="group"><h3>Recent descents</h3><div class="chart">
+        <svg viewBox="0 -14 ${W} ${CH + 16}" preserveAspectRatio="none" role="img" aria-label="Depth reached on each of the last ${n} runs">
+          <line x1="0" x2="${W}" y1="${CH}" y2="${CH}" class="base"/>
+          <line x1="0" x2="${W}" y1="${by}" y2="${by}" class="bestline"/>
+          ${bars}
+        </svg>
+        <div class="chart-legend"><span>Oldest run</span><span>Latest</span></div>
+        <div class="chart-keys"><span class="bestkey">Best ${fmt(bestAll)} m</span>${H.some(r => r.v) ? '<span class="winkey">Core destroyed</span>' : ''}<span class="tapkey">Tap a bar for details</span></div>
+        <div class="chart-tip" id="runTip"></div>
+      </div></section>`;
+    }
+
+    // what ended each run
+    const deaths = Object.entries(st.deaths).sort((a, b) => b[1] - a[1]);
+    const dTot = deaths.reduce((a, [, v]) => a + v, 0);
+    if (dTot) html += `<section class="group"><h3>What ended your runs</h3>${this.bars(deaths.map(([k, v]) => [CAUSES[k] || k, v, `${v} · ${Math.round(v / dTot * 100)}%`]), 'red')}</section>`;
+
+    // damage
+    const dmg = Object.entries(st.dmg).sort((a, b) => b[1] - a[1]);
+    html += `<section class="group"><h3>Damage</h3>
+      ${dmg.length ? this.bars(dmg.map(([k, v]) => [CAUSES[k] || k, v, fmt(v)]), 'red') : ''}
+      ${this.list([['Hull damage taken', fmt(st.hullTaken)], ['Absorbed by shields', fmt(st.shieldAbs)], ['Blocked by armor', fmt(st.armorBlocked)], ['Hull repaired', fmt(st.repaired)], ['Time overheating', fmtTime(st.overheatTime)], ['Wall scrapes', fmt(st.scrapes)]])}</section>`;
+
+    // defenders
+    const types = Object.keys(ENEMIES).filter(k => k !== 'heart' || S.contacts.heart);
+    html += `<section class="group"><h3>Defenders</h3><div class="dtable">
+      <div class="dh"><span>Contact</span><span>Seen</span><span>Destroyed</span></div>
+      ${types.map(k => S.contacts[k] || st.enc[k]
+        ? `<div><span>${ENEMIES[k].name}</span><b>${fmt(st.enc[k] || 0)}</b><b>${fmt(st.kill[k] || 0)}</b></div>`
+        : `<div class="unk"><span>▒▒▒▒ Unknown contact</span><b>–</b><b>–</b></div>`).join('')}
+    </div></section>`;
+
+    html += `<section class="group"><h3>Weapons &amp; systems</h3>${this.list([
+      ['Cannon shots fired', fmt(st.shots)], ['Barriers drilled through', fmt(st.kill.barrier || 0)], ['Stasis fields collapsed', fmt(st.kill.stasis || 0)],
+      ['Time slowed by stasis', fmtTime(st.stasisTime)], ['Missile volleys', fmt(st.missiles)], ['Lance shots', fmt(st.lances)],
+      ['EMP bursts', fmt(st.emps)], ['Overdrives', fmt(st.ods)]])}</section>`;
+    html += `<section class="group"><h3>Boarding</h3>${this.list([
+      ['Breacher pods latched on', fmt(st.pods)], ['Intruders aboard', fmt(st.boarded)], ['Intruders repelled', fmt(st.repelled)], ['Security bots lost', fmt(st.botsLost)]])}</section>`;
+    html += `<section class="group"><h3>Salvage &amp; pickups</h3>${this.list([
+      ['Salvage recovered', `⬡ ${fmt(S.lifetime.salvage)}`], ['Data transmitted', `◈ ${fmt(st.data)}`], ['Salvage pieces collected', fmt(st.caches)],
+      ['Coolant cells', fmt(st.coolant)], ['Repair kits', fmt(st.kits)]])}</section>`;
+    if (st.since > 0) html += `<p class="fine">Detailed stats began with run ${st.since + 1}. Earlier runs count toward the career totals only.</p>`;
+    this.afterRender = () => H.length && this.showRun(H.length - 1);
+    return html;
+  }
+
+  bars(rows, tone) {
+    const max = Math.max(...rows.map(r => r[1])) || 1;
+    return `<div class="hbars ${tone}">${rows.map(([label, v, txt]) =>
+      `<div class="hb"><span>${label}</span><div class="tr"><i style="width:${Math.max(1.5, v / max * 100)}%"></i></div><b>${txt}</b></div>`).join('')}</div>`;
+  }
+
+  list(rows) {
+    return `<div class="slist">${rows.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('')}</div>`;
+  }
+
+  showRun(i) {
+    const r = (this.S.history || [])[i], tip = $('#runTip'); if (!r || !tip) return;
+    document.querySelectorAll('.rbar').forEach((g, j) => g.classList.toggle('on', j === i));
+    const end = r.v ? '★ Core destroyed' : `Lost to ${(CAUSES[r.k] || r.k || 'unknown').toLowerCase()}`;
+    tip.innerHTML = `<b>Run ${r.n}</b> · ${MASSES[r.m].name} · <b>${fmt(r.d)} m</b> · ${end} · ${fmtTime(r.t)} · ${r.x} kills · ⬡ ${fmt(r.s)}`;
   }
 
   click(e) {

@@ -50,6 +50,13 @@ export class Run {
     this.salvage = 0; this.kills = 0; this.boarded = 0; this.repelled = 0;
     this.absorbed = 0; this.repaired = 0; this.gunnerXp = 0;
     this.newContacts = [];
+    // everything the Stats tab tracks for this run
+    this.tally = {
+      enc: {}, kill: {}, dmg: {}, shieldAbs: 0, armorBlocked: 0, hullTaken: 0,
+      shots: 0, missiles: 0, lances: 0, emps: 0, ods: 0, scrapes: 0, pods: 0, botsLost: 0,
+      caches: 0, coolant: 0, kits: 0, stasisTime: 0, overheatTime: 0,
+    };
+    this.killer = null;
     this.over = false; this.overT = 0; this.victory = false; this.dead = false;
     this.heart = null;
     this.stasisOn = false;
@@ -161,6 +168,7 @@ export class Run {
 
   spawnBarrier(y) {
     const hp = ENEMIES.barrier.hp * this.hpPow(y);
+    this.tally.enc.barrier = (this.tally.enc.barrier || 0) + 1;
     this.enemies.push({ type: 'barrier', x: this.center(y), y, hp, maxHp: hp, r: 0, t: 0, flash: 0, stun: 0, buff: 0, barrier: true, seed: Math.random(), active: true });
   }
 
@@ -170,6 +178,7 @@ export class Run {
     const hp = 1200 * this.hpPow(this.coreY) * (1 + this.massIdx * 0.25);
     this.heart = { type: 'heart', x: this.center(y), y, hp, maxHp: hp, r: 190, t: 0, cd: 2, spawnCd: 4, flash: 0, stun: 0, buff: 0, active: true, seed: 0 };
     this.enemies.push(this.heart);
+    this.tally.enc.heart = 1;
     this.contact('heart');
     void def;
   }
@@ -204,7 +213,7 @@ export class Run {
     if (this.empCd > 0 && !sab('bridge')) this.empCd -= dt;
     if (this.odCd > 0 && !sab('bridge')) this.odCd -= dt;
     if (input.emp && st.emp && this.empCd <= 0) this.fireEmp();
-    if (input.od && st.overdrive && this.odCd <= 0) { this.odT = st.odDur; this.odCd = 30; this.emit({ k: 'od' }); }
+    if (input.od && st.overdrive && this.odCd <= 0) { this.odT = st.odDur; this.odCd = 30; this.tally.ods++; this.emit({ k: 'od' }); }
     if (this.odT > 0) this.odT -= dt;
 
     // --- steering
@@ -254,7 +263,7 @@ export class Run {
     if (p.x < left || p.x > right) {
       const side = p.x < left ? -1 : 1;
       p.x = side < 0 ? left : right;
-      if (Math.abs(p.vx) > 60) this.emit({ k: 'scrape', x: p.x + side * R, y: p.y });
+      if (Math.abs(p.vx) > 60) { this.tally.scrapes++; this.emit({ k: 'scrape', x: p.x + side * R, y: p.y }); }
       p.vx = -side * Math.max(120, Math.abs(p.vx) * 0.4);
       this.hurt(14 * st.impact * this.dmgPow(p.y) * (odOn ? 0.3 : 1), false, 'wall');
     }
@@ -279,6 +288,8 @@ export class Run {
     p.heat += (gen - st.cooling) * dt;
     if (p.heat < 0) p.heat = 0;
     p.overheat = p.heat >= st.heatMax;
+    if (p.overheat) this.tally.overheatTime += dt;
+    if (this.stasisOn) this.tally.stasisTime += dt;
     if (p.overheat) {
       p.heat = st.heatMax;
       this.hurt((6 + 20 * f) * this.mass.heat * dt * (1 + this.massIdx * 0.3), true, 'heat');
@@ -334,19 +345,23 @@ export class Run {
   hurt(dmg, direct, src) {
     const p = this.p, st = this.st;
     if (dmg <= 0) return;
+    const T = this.tally;
     if (!direct) {
+      T.armorBlocked += dmg * st.armor;
       dmg *= (1 - st.armor);
       if (this.odT > 0) dmg *= 0.5;
       if (p.shield > 0) {
         const a = Math.min(p.shield, dmg);
-        p.shield -= a; dmg -= a; this.absorbed += a;
+        p.shield -= a; dmg -= a; this.absorbed += a; T.shieldAbs += a;
         p.shieldT = 1.2;
         if (src !== 'wall') this.emit({ k: 'shieldhit' });
       }
     }
     if (dmg > 0) {
       p.hull -= dmg;
-      if (src !== 'heat' && src !== 'board') { p.hitT = 0.18; this.emit({ k: 'hullhit', d: dmg }); }
+      T.hullTaken += dmg; T.dmg[src] = (T.dmg[src] || 0) + dmg;
+      if (p.hull <= 0 && !this.killer && !this.dead) this.killer = src;
+      if (src !== 'heat' && src !== 'boarders') { p.hitT = 0.18; this.emit({ k: 'hullhit', d: dmg }); }
     }
   }
 
@@ -363,6 +378,7 @@ export class Run {
     e.hp = 0;
     const def = ENEMIES[e.type];
     this.kills++;
+    this.tally.kill[e.type] = (this.tally.kill[e.type] || 0) + 1;
     this.gunnerXp += def.xp;
     const v = def.salvage * this.lootPow(e.y) * this.st.salvageMul;
     const n = Math.min(8, 1 + Math.floor(def.salvage / 4));
@@ -384,6 +400,7 @@ export class Run {
 
   fireEmp() {
     const p = this.p, st = this.st;
+    this.tally.emps++;
     this.empCd = st.empCd;
     const r2 = st.empRadius ** 2;
     this.bullets = this.bullets.filter(b => dist2(b.x, b.y, p.x, p.y) > r2);
@@ -455,6 +472,7 @@ export class Run {
         tr.recoil = 1;
         const sp = 1400, jitter = rand(-0.03, 0.03);
         this.shots.push({ x: tx, y: ty, vx: Math.cos(ang + jitter) * sp, vy: Math.sin(ang + jitter) * sp + p.vy, dmg: st.gunDmg, life: 0.55, k: 'gun' });
+        this.tally.shots++;
         this.emit({ k: 'shoot' });
       }
     });
@@ -492,7 +510,7 @@ export class Run {
       this.missiles.push({ x: p.x + side * this.R * 0.7, y: p.y - 10, vx: side * 260, vy: -120 + p.vy, tgt, life: 3, dmg: st.missileDmg, trail: [] });
       any = true;
     }
-    if (any) this.emit({ k: 'missile' });
+    if (any) { this.tally.missiles++; this.emit({ k: 'missile' }); }
   }
 
   fireLance() {
@@ -520,7 +538,7 @@ export class Run {
       }
       if (hit || da === 0) { fired = true; this.beams.push({ x: x0, y: y0, a, len, t: 0.35, k: 'lance' }); }
     }
-    if (fired) this.emit({ k: 'lance' });
+    if (fired) { this.tally.lances++; this.emit({ k: 'lance' }); }
     return fired;
   }
 
@@ -600,6 +618,7 @@ export class Run {
       const dy = e.y - p.y;
       if (!e.active && dy < 1050 && dy > -700) {
         e.active = true;
+        this.tally.enc[e.type] = (this.tally.enc[e.type] || 0) + 1;
         this.contact(e.type);
       }
       if (!e.active) continue;
@@ -632,11 +651,11 @@ export class Run {
           if (dist2(e.x, e.y, p.x, p.y) < (R + 12) ** 2) {
             if (p.shield > this.st.shieldMax * 0.35 && this.st.shieldMax > 0) {
               // a strong shield bounces the pod
-              this.hurt(6 * dp, false, 'pod');
+              this.hurt(6 * dp, false, 'breacher');
               e.vx = (e.x - p.x) * 6; e.vy = (e.y - p.y) * 6; e.x += e.vx * 0.05; e.y += e.vy * 0.05;
               e.stun = 0.8;
             } else {
-              e.attached = true; e.ang = Math.atan2(e.y - p.y, e.x - p.x); e.bore = 3.2;
+              e.attached = true; e.ang = Math.atan2(e.y - p.y, e.x - p.x); e.bore = 3.2; this.tally.pods++;
               this.emit({ k: 'toast', text: 'BREACHER ATTACHED', tone: 'bad' });
               this.emit({ k: 'clang' });
             }
@@ -745,8 +764,8 @@ export class Run {
       b.x += b.vx * dt; b.y += b.vy * dt + (b.carry ? p.vy * dt : 0); b.life -= dt;
       if (this.dead) continue;
       const d = dist2(b.x, b.y, p.x, p.y);
-      if (p.shield > 0 && d < shR * shR) { this.hurt(b.dmg, false, 'bullet'); this.emit({ k: 'deflect', x: b.x, y: b.y }); b.life = 0; }
-      else if (d < R * R) { this.hurt(b.dmg, false, 'bullet'); this.emit({ k: 'spark', x: b.x, y: b.y, c: 'hull' }); b.life = 0; }
+      if (p.shield > 0 && d < shR * shR) { this.hurt(b.dmg, false, b.k); this.emit({ k: 'deflect', x: b.x, y: b.y }); b.life = 0; }
+      else if (d < R * R) { this.hurt(b.dmg, false, b.k); this.emit({ k: 'spark', x: b.x, y: b.y, c: 'hull' }); b.life = 0; }
     }
     this.bullets = this.bullets.filter(b => b.life > 0);
   }
@@ -765,9 +784,9 @@ export class Run {
       }
       if (d2 < (this.R + 10) ** 2) {
         k.gone = true;
-        if (k.k === 'salvage') { this.salvage += k.v * (k.vx !== undefined ? 1 : this.st.salvageMul); this.emit({ k: 'coin' }); }
-        else if (k.k === 'coolant') { p.heat = Math.max(0, p.heat - this.st.heatMax * 0.35); this.emit({ k: 'toast', text: 'COOLANT CELL  −35% HEAT', tone: 'good' }); this.emit({ k: 'powerup' }); }
-        else if (k.k === 'repair') { const r = Math.min(this.st.hullMax - p.hull, this.st.hullMax * 0.25); p.hull += r; this.repaired += r; this.emit({ k: 'toast', text: 'REPAIR KIT  +25% HULL', tone: 'good' }); this.emit({ k: 'powerup' }); }
+        if (k.k === 'salvage') { this.tally.caches++; this.salvage += k.v * (k.vx !== undefined ? 1 : this.st.salvageMul); this.emit({ k: 'coin' }); }
+        else if (k.k === 'coolant') { this.tally.coolant++; p.heat = Math.max(0, p.heat - this.st.heatMax * 0.35); this.emit({ k: 'toast', text: 'COOLANT CELL  −35% HEAT', tone: 'good' }); this.emit({ k: 'powerup' }); }
+        else if (k.k === 'repair') { this.tally.kits++; const r = Math.min(this.st.hullMax - p.hull, this.st.hullMax * 0.25); p.hull += r; this.repaired += r; this.emit({ k: 'toast', text: 'REPAIR KIT  +25% HULL', tone: 'good' }); this.emit({ k: 'powerup' }); }
       }
     }
   }
@@ -798,10 +817,10 @@ export class Run {
       else if (d <= 0.06) { b.inRoom = true; }
       if (b.inRoom) b.room.sab++;
       // boarders chew on the hull wherever they are
-      this.hurt(1.2 * this.dmgPow(this.p.y) * dt, true, 'board');
+      this.hurt(1.2 * this.dmgPow(this.p.y) * dt, true, 'boarders');
     }
     const reactor = this.rooms.find(r => r.id === 'reactor');
-    if (reactor.sab) this.hurt(2.5 * reactor.sab * this.dmgPow(this.p.y) * dt, true, 'board');
+    if (reactor.sab) this.hurt(2.5 * reactor.sab * this.dmgPow(this.p.y) * dt, true, 'boarders');
 
     for (const bt of this.bots) {
       if (bt.hit > 0) bt.hit -= dt;
@@ -829,7 +848,7 @@ export class Run {
         bt.hp -= (b.dmg / (40 * st.botPow)) * dt; bt.hit = 0.1;
         if (Math.random() < dt * 8) this.emit({ k: 'zapin', x: (b.x + bt.x) / 2, y: (b.y + bt.y) / 2 });
         if (b.hp <= 0) { this.repelled++; this.emit({ k: 'toast', text: 'INTRUDER NEUTRALISED', tone: 'good' }); this.emit({ k: 'kill_in' }); }
-        if (bt.hp <= 0) { bt.respawn = 6; this.emit({ k: 'botdown' }); }
+        if (bt.hp <= 0) { bt.respawn = 6; this.tally.botsLost++; this.emit({ k: 'botdown' }); }
       }
     }
     this.boarders = this.boarders.filter(b => b.hp > 0);
@@ -846,6 +865,8 @@ export class Run {
     const xm = st.xpMul;
     return {
       depth, victory: this.victory, salvage, data, kills: this.kills,
+      killer: this.victory ? null : this.dead ? (this.killer || 'unknown') : 'abandon',
+      time: this.t, tally: this.tally, mass: this.massIdx, repaired: this.repaired,
       boarded: this.boarded, repelled: this.repelled, newContacts: this.newContacts.slice(),
       crewXp: {
         gunner: Math.round(this.gunnerXp * xm),

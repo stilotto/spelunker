@@ -1,6 +1,6 @@
 // Boot, game loop, screen flow, HUD.
-import { M, MASSES, ENEMIES, CREW, upgradeCost } from './data.js';
-import { load, save, wipe, computeStats, crewUnlocked, addCrewXp, visibleUpgrades, visibleResearch } from './state.js';
+import { M, MASSES, ENEMIES, CREW, CAUSES, upgradeCost } from './data.js';
+import { load, save, wipe, computeStats, crewUnlocked, addCrewXp, visibleUpgrades, visibleResearch, recordRun } from './state.js';
 import { Run } from './run.js';
 import { Renderer } from './render.js';
 import { Input } from './input.js';
@@ -202,6 +202,7 @@ function endRun() {
   S.tips.steer = true;
   S.salvage += res.salvage; S.data += res.data;
   S.lifetime.salvage += res.salvage; S.lifetime.kills += res.kills; S.lifetime.depth += res.depth; S.lifetime.boarders += res.repelled;
+  recordRun(S, res);
   if (res.depth > prevBest) S.best[m] = res.depth;
   for (const t of res.newContacts) S.contacts[t] = true;
   const crewLines = [];
@@ -232,6 +233,7 @@ function endRun() {
       <div class="res-row"><span>Salvage recovered</span><b style="color:var(--gold)">⬡ ${fmt(res.salvage)}</b></div>
       <div class="res-row"><span>Data transmitted</span><b style="color:var(--violet)">◈ ${fmt(res.data)}</b></div>
       ${shards ? `<div class="res-row"><span>Core shards</span><b style="color:var(--pink)">✦ ${shards}</b></div>` : ''}
+      ${res.killer ? `<div class="res-row"><span>Cause of loss</span><b>${CAUSES[res.killer] || res.killer}</b></div>` : ''}
       <div class="res-row"><span>Defenders destroyed</span><b>${res.kills}</b></div>
       ${res.boarded ? `<div class="res-row"><span>Boarders repelled</span><b>${res.repelled} / ${res.boarded}</b></div>` : ''}
     </div>

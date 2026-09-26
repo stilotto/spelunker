@@ -374,3 +374,48 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .avbtn:hover { transform: scale(1.06); filter: brightness(1.2); }
 .avbtn:active { transform: scale(.97); }
 .tour-skip.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+
+/* ---------- stats tab ---------- */
+.stiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.stile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.stile small { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stile b { font: 700 22px/1.2 "Chakra Petch", sans-serif; }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 12px 10px; }
+.chart svg { width: 100%; height: 170px; display: block; overflow: visible; }
+.chart .base { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.chart .bestline { stroke: #ff5c7a; stroke-width: 1.5; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; }
+.rbar { cursor: pointer; }
+.rbar path { fill: rgba(111,227,255,.45); transition: fill .15s; }
+.rbar.on path, .rbar:hover path { fill: var(--cyan); }
+.rbar.win path { fill: rgba(255,211,107,.6); }
+.rbar.win.on path, .rbar.win:hover path { fill: var(--gold); }
+.chart-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.chart-keys .bestkey { color: #ff8aa0; }
+.chart-keys .bestkey::before { content: ""; display: inline-block; width: 16px; border-top: 2px dashed #ff5c7a; vertical-align: middle; margin-right: 6px; }
+.chart-tip { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--panel2); font-size: 12.5px; color: #c3ccd8; min-height: 34px; }
+.chart-tip b { color: var(--text); font-family: "Chakra Petch", sans-serif; }
+.hbars { display: grid; gap: 7px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 8px; }
+.hb { display: grid; grid-template-columns: minmax(110px, 38%) 1fr 64px; align-items: center; gap: 10px; font-size: 13px; }
+.hb span { color: #c3ccd8; }
+.hb b { font: 600 13px/1 "Chakra Petch", sans-serif; color: var(--text); white-space: nowrap; text-align: right; }
+.hb .tr { height: 10px; background: rgba(255,255,255,.05); border-radius: 0 4px 4px 0; overflow: hidden; }
+.hb .tr i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--cyan); }
+.hbars.red .tr i { background: #ff6b7d; }
+.slist { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px 12px; }
+.slist div { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13.5px; }
+.slist div:last-child { border-bottom: 0; }
+.slist span { color: #aeb9c8; }
+.slist b { font: 600 14px/1.2 "Chakra Petch", sans-serif; }
+.dtable { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px 12px; }
+.dtable div { display: grid; grid-template-columns: 1fr 64px 80px; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13.5px; }
+.dtable div:last-child { border-bottom: 0; }
+.dtable b { font: 600 14px/1.2 "Chakra Petch", sans-serif; text-align: right; }
+.dtable .dh { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.dtable .dh span:not(:first-child) { text-align: right; }
+.dtable .unk { color: #56627a; }
+.dtable .unk b { color: #56627a; }
+.dock small { letter-spacing: .06em; }
+.chart-keys .winkey { color: var(--gold); }
+.chart-keys .winkey::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--gold); vertical-align: -1px; margin-right: 6px; }
+.chart-keys { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+.chart-keys .tapkey { margin-left: auto; }

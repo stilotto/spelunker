@@ -159,3 +159,10 @@ export const RELICS = [
 ];
 
 export const upgradeCost = (u, lvl) => Math.round(u.base * Math.pow(u.k, lvl));
+
+// What a run's hull damage (and its ending) gets blamed on, for the Stats tab.
+export const CAUSES = {
+  drone: 'Hunter drone fire', sentry: 'Sentry fire', heart: 'Core defences', mine: 'Mines',
+  lancer: 'Lancer beams', breacher: 'Breacher pods', boarders: 'Boarders', wall: 'Wall impacts',
+  heat: 'Overheating', abandon: 'Abandoned', unknown: 'Unknown',
+};

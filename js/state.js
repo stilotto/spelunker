@@ -15,16 +15,45 @@ export function freshState() {
     seen: {},             // ids the player has already been shown (for NEW badges)
     contacts: {},         // enemy types encountered (first contact pays Data)
     lifetime: { salvage: 0, kills: 0, depth: 0, boarders: 0 },
+    stats: freshStats(),  // career totals for the Stats tab
+    history: [],          // the last 40 runs, newest last
     sound: true,
     tutorial: true,
   };
+}
+
+export function freshStats() {
+  return {
+    since: 0, time: 0, data: 0, victories: 0, deaths: {}, enc: {}, kill: {}, dmg: {},
+    shieldAbs: 0, armorBlocked: 0, hullTaken: 0, repaired: 0, shots: 0, missiles: 0, lances: 0,
+    emps: 0, ods: 0, scrapes: 0, pods: 0, boarded: 0, repelled: 0, botsLost: 0,
+    caches: 0, coolant: 0, kits: 0, stasisTime: 0, overheatTime: 0,
+  };
+}
+
+// Fold one finished run into the career stats and run history.
+export function recordRun(s, res) {
+  if (!s.stats) s.stats = Object.assign(freshStats(), { since: s.runs - 1 });
+  const st = s.stats, T = res.tally, add = (o, k, v) => { o[k] = (o[k] || 0) + v; };
+  st.time += res.time; st.data += res.data;
+  if (res.victory) st.victories++;
+  if (res.killer) add(st.deaths, res.killer, 1);
+  for (const k in T.enc) add(st.enc, k, T.enc[k]);
+  for (const k in T.kill) add(st.kill, k, T.kill[k]);
+  for (const k in T.dmg) add(st.dmg, k, T.dmg[k]);
+  for (const k of ['shieldAbs', 'armorBlocked', 'hullTaken', 'shots', 'missiles', 'lances', 'emps', 'ods', 'scrapes', 'pods', 'botsLost', 'caches', 'coolant', 'kits', 'stasisTime', 'overheatTime']) st[k] += T[k];
+  st.repaired += res.repaired || 0;
+  st.boarded += res.boarded; st.repelled += res.repelled;
+  s.history = (s.history || []).concat({ n: s.runs, m: res.mass, d: res.depth, v: res.victory, k: res.killer, t: Math.round(res.time), s: res.salvage, x: res.kills }).slice(-40);
 }
 
 export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return freshState();
-    const s = Object.assign(freshState(), JSON.parse(raw));
+    const saved = JSON.parse(raw);
+    const s = Object.assign(freshState(), saved);
+    if (!saved.stats) s.stats.since = s.runs;
     return s;
   } catch (e) {
     return freshState();
