@@ -243,7 +243,7 @@ function endRun() {
       ${res.boarded ? `<div class="res-row"><span>Boarders repelled</span><b>${res.repelled} / ${res.boarded}</b></div>` : ''}
     </div>
     ${crewLines.length ? `<div class="res-sec">Crew uplink (skills saved)</div><div class="res-crew">${crewLines.join('')}</div>` : ''}
-    ${unlockedMass ? `<div class="res-sec">New target</div><div class="reveal"><div class="target"><b>${unlockedMass.name}</b> · ${unlockedMass.kind}. Relics are now online.</div></div>` : ''}
+    ${unlockedMass ? `<div class="res-sec">New target</div><div class="reveal"><div class="target"><b>${unlockedMass.name}</b> · ${unlockedMass.kind}.${m === 0 ? " Relics are now online." : ""}</div></div>` : ''}
     ${revealed.length ? `<div class="res-sec">Newly revealed</div><div class="reveal">${revealed.map(n => `<details><summary><b>${n.name}</b><small>${n.kind}</small></summary><p>${n.body}</p><p class="rcost">${n.cost}</p></details>`).join('')}</div><p class="fine">Tap one to see what it does.</p>` : ''}
     <div class="res-actions"><button id="btnHangar" class="btn primary big">Return to hangar</button></div>`;
   mode = 'results';

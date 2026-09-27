@@ -3,7 +3,7 @@
 //
 //   node tools/balance.mjs                     # one campaign, current data.js
 //   node tools/balance.mjs --trials 3          # several campaigns (~1 min each)
-//   node tools/balance.mjs --mult 1,4,12,30,44 --heat 1,1.3,1.45,1.6,1.75 --core 9900,49500,70000,90000,150000
+//   node tools/balance.mjs --mult 1,4,12,30,44 --heat 1,1.3,1.45,1.6,1.75 --core 30000,140000,175000,360000,300000
 //   node tools/balance.mjs --save-at 4 --save oss.json   # stop when world 4 unlocks, save the state
 //   node tools/balance.mjs --load oss.json               # carry on from that state
 //
@@ -13,7 +13,8 @@
 // Data once all visible research is bought. Crew earn run XP as in the game.
 //
 // Output per world: crew levels when cleared, runs taken, depth fraction of
-// the first 3 runs, the run that first got past 95%, the best fraction, and
+// the first 3 runs, the run that first got past 95%, how many runs reached
+// the core (and its HP left on each failed one), the best fraction, and
 // what killed the ship on runs that died past 95%.
 import fs from 'fs';
 
@@ -31,7 +32,9 @@ const cap = +(arg.cap || 600), trials = +(arg.trials || 1);
 function play(s, m) {
   const r = new Run(S.computeStats(s), m, s.contacts);
   while (!r.over && r.t < 900) { r.step(1 / 30, { emp: true }); r.events.length = 0; }
-  return r.result();
+  const res = r.result();
+  if (r.heart) res.coreLeft = Math.max(0, r.heart.hp / r.heart.maxHp);
+  return res;
 }
 
 function shop(s) {
@@ -73,6 +76,7 @@ function campaign() {
     L.runs++;
     if (L.first.length < 3) L.first.push(f.toFixed(2));
     L.best = Math.max(L.best, f);
+    if (res.coreLeft !== undefined) { L.enc = (L.enc || 0) + 1; if (!res.victory) (L.left ||= []).push(Math.round(res.coreLeft * 100)); }
     if (f > 0.95) { L.reach ||= L.runs; if (res.killer) L.deep[res.killer] = (L.deep[res.killer] || 0) + 1; }
     if (res.victory) {
       s.cleared[m] = 1; s.shards += m + 1; s.massUnlocked++;
@@ -83,7 +87,8 @@ function campaign() {
   for (const m in log) {
     const L = log[m];
     console.log(MASSES[m].id.padEnd(8), `runs ${L.runs}`.padEnd(9), `first ${L.first.join(' ')}`.padEnd(21),
-      `reach ${L.reach || '-'}`.padEnd(10), `best ${L.best.toFixed(2)}`, L.cleared ? `CLEARED crew ${L.crew}` : '',
+      `reach ${L.reach || '-'}`.padEnd(10), `core fights ${L.enc || 0}`.padEnd(15), `best ${L.best.toFixed(2)}`, L.cleared ? `CLEARED crew ${L.crew}` : '',
+      L.left ? `core HP left ${L.left.join(',')}%` : '',
       Object.keys(L.deep).length ? `deep deaths ${JSON.stringify(L.deep)}` : '');
   }
 }
