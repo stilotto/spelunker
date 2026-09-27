@@ -79,11 +79,16 @@ export const ENEMIES = {
 // ---------------------------------------------------------------- crew
 // Crew AIs keep their skills between runs over the Ansible link.
 export const CREW = {
-  gunner:   { role: 'Gunner',        name: 'FLETCH', color: '#ff7a59', perk: '+6% fire rate, +4% damage per level', xpFrom: 'kills' },
-  pilot:    { role: 'Pilot',         name: 'VANE',   color: '#59c7ff', perk: '+7% steering, better auto-centering, -6% impact damage per level', xpFrom: 'depth' },
-  security: { role: 'Security chief',name: 'BOLT',   color: '#6cff9a', perk: '+10% security bot damage and health per level', xpFrom: 'boarders repelled' },
-  shieldt:  { role: 'Shield tech',   name: 'AEGIS',  color: '#b18cff', perk: '+8% shield regen, +4% shield capacity per level', xpFrom: 'damage absorbed' },
-  repair:   { role: 'Repair tech',   name: 'PATCH',  color: '#ffd35a', perk: '+0.35 hull repaired per second per level', xpFrom: 'hull repaired' },
+  gunner:   { role: 'Gunner',        name: 'FLETCH', color: '#ff7a59', perk: '+6% fire rate, +4% damage per level', xpFrom: 'kills',
+    bonus: l => `+${6 * (l - 1)}% fire rate, +${4 * (l - 1)}% damage`, say: 'Every kill teaches me something. Sim-training just skips the wait.' },
+  pilot:    { role: 'Pilot',         name: 'VANE',   color: '#59c7ff', perk: '+7% steering, better auto-centering, -6% impact damage per level', xpFrom: 'depth',
+    bonus: l => `+${7 * (l - 1)}% steering, -${Math.min(80, 6 * (l - 1))}% impact damage`, say: 'Tap my portrait and come see me at the helm. I have opinions.' },
+  security: { role: 'Security chief',name: 'BOLT',   color: '#6cff9a', perk: '+10% security bot damage and health per level', xpFrom: 'boarders repelled',
+    bonus: l => `+${10 * l}% bot damage and health`, say: 'Sim-training costs Data. So does research. Spend it wisely.' },
+  shieldt:  { role: 'Shield tech',   name: 'AEGIS',  color: '#b18cff', perk: '+8% shield regen, +4% shield capacity per level', xpFrom: 'damage absorbed',
+    bonus: l => `+${8 * l}% shield regen, +${4 * l}% capacity`, say: 'We level up free on every run. Training is for when one of us falls behind.' },
+  repair:   { role: 'Repair tech',   name: 'PATCH',  color: '#ffd35a', perk: '+0.35 hull repaired per second per level', xpFrom: 'hull repaired',
+    bonus: l => `+${(0.35 * l).toFixed(2)} hull/s repair`, say: 'Come find me in the repair bay. Tap my portrait.' },
 };
 export const CREW_MAX = 25;
 export const crewXpNeed = (lvl) => Math.round(18 * Math.pow(1.42, lvl - 1));
@@ -151,9 +156,12 @@ export const UPGRADES = [
 ];
 
 // ---------------------------------------------------------------- relics
-// Bought with core shards: world N's core pays N shards, for its first
-// SHARD_CLEARS kills (the last world pays every time).
+// Bought with core shards: world N's core pays N shards for its first
+// SHARD_CLEARS kills, then less each time (kill k pays N * SHARD_CLEARS / k,
+// banked as fractions). The last world pays in full every time.
 export const SHARD_CLEARS = 3;
+export const shardPay = (m, kill) =>
+  kill <= SHARD_CLEARS || m >= MASSES.length - 1 ? m + 1 : (m + 1) * SHARD_CLEARS / kill;
 export const RELICS = [
   { id: 'insert',  name: 'Insertion charge', max: 8, cost: l => 1 + Math.floor(l / 2), desc: 'Start each run 8% of the way to the core.', fmt: l => `start at ${8 * l}%` },
   { id: 'echo',    name: 'Ansible echo',     max: 10, cost: l => 1 + Math.floor(l / 3), desc: '+40% Data per run.', fmt: l => `+${40 * l}% Data` },

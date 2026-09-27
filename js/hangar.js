@@ -1,5 +1,5 @@
 // Between-run hangar: upgrades, research, crew, relics, target select.
-import { ENEMIES, CAUSES, UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS, SHARD_CLEARS } from './data.js';
+import { ENEMIES, CAUSES, UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS, SHARD_CLEARS, shardPay } from './data.js';
 import {
   lvl, has, relic, visibleUpgrades, visibleResearch, nextTeaser, researchAvailable,
   freshStats, crewUnlocked, trainCost, addCrewXp, buyUpgrade, buyResearch, buyRelic, computeStats, save,
@@ -64,7 +64,7 @@ export class Hangar {
     $('#tabs').addEventListener('click', e => {
       const b = e.target.closest('[data-tab]'); if (!b) return;
       if (this.tab === b.dataset.tab) return;
-      this.tab = b.dataset.tab; this.render();
+      this.tab = b.dataset.tab; this.chatter = null; this.render();
       $('#hangar').scrollTop = 0;
     });
     $('#tabBody').addEventListener('click', e => this.click(e));
@@ -83,7 +83,7 @@ export class Hangar {
     const CUR = {
       s: ['⬡ Salvage', 'var(--gold)', 'Scrap and crystal you pull from wrecks, caches and the depth you reach.', 'Spend it on Upgrades: hull, drive, heat, weapons and systems.'],
       d: ['◈ Data', 'var(--violet)', 'Scans sent home over the Ansible: more for going deeper, and a bonus the first time you meet a new enemy.', 'Spend it on Research, which unlocks new systems and crew, or to sim-train your crew.'],
-      k: ['✦ Core shards', 'var(--pink)', 'Pieces of a destroyed core. You get them by destroying a world\'s core. Each core only yields shards for its first ' + SHARD_CLEARS + ' kills.', 'Spend them on Relics: permanent bonuses for every run.'],
+      k: ['✦ Core shards', 'var(--pink)', 'Pieces of a destroyed core. You get them by destroying a world\'s core. Each core pays in full for its first ' + SHARD_CLEARS + ' kills, then a little less each time.', 'Spend them on Relics: permanent bonuses for every run.'],
     };
     document.querySelector('.wallet').addEventListener('click', e => {
       const b = e.target.closest('[data-cur]'); if (!b) return;
@@ -143,7 +143,8 @@ export class Hangar {
     const k = Math.min(1, best / m.core);
     $('#pBest').style.width = (k * 100) + '%';
     $('#pBestLbl').style.left = (k * 100) + '%';
-    $('#pBestLbl').textContent = best ? `best ${fmt(best)} m` : '';
+    // once the core has fallen the bar is full and the label only gets in the way
+    $('#pBestLbl').textContent = best && !S.cleared[S.mass] ? `best ${fmt(best)} m` : '';
     $('#pCore').textContent = `core ${fmt(m.core)} m`;
     const st = computeStats(S);
     const dps = st.turrets * st.gunDmg * st.fireRate;
@@ -153,7 +154,16 @@ export class Hangar {
       ['Heat cap', fmt(st.heatMax)], ['Cooling', `${st.cooling.toFixed(1)}/s`],
     ];
     $('#statgrid').innerHTML = stats.map(([a, b]) => `<div class="stat"><small>${a}</small><b>${b}</b></div>`).join('');
-    $('#btnLaunch b').textContent = S.runs === 0 ? 'Launch' : `Launch run ${S.runs + 1}`;
+    const wr = (S.worldRuns || {})[S.mass] || 0;
+    $('#btnLaunch b').textContent = wr === 0 ? 'Launch' : `Launch run ${wr + 1}`;
+    const kills = S.cleared[S.mass] || 0;
+    $('#relicLine').hidden = !kills;
+    if (kills) {
+      const pay = shardPay(S.mass, kills + 1), dust = S.shardDust || 0;
+      const p = +pay.toFixed(2);
+      $('#relicLine').innerHTML = `<b>✦ ${p}</b> shard${p === 1 ? '' : 's'} for the next core` +
+        (dust > 0.005 || pay % 1 ? ` · <b>${Math.round(dust * 100)}%</b> to next shard` : '');
+    }
     this.readStats = stats.concat([
       ['Turrets', String(st.turrets)], ['Ram', `${fmt(st.ram)} dps`], ['Armor', `${Math.round(st.armor * 100)}%`],
       st.shieldMax ? ['Shield regen', `${st.shieldRegen.toFixed(1)}/s`] : null,
@@ -162,9 +172,9 @@ export class Hangar {
     // tabs
     const keys = Object.keys(this.keys());
     const newIn = p => keys.some(k => k.startsWith(p) && this.isNew(k));
-    const tabs = [['ship', 'Ship', null], ['upgrades', 'Upgrades', 'u:']];
+    // Crew sits between Upgrades and Research so the two long labels never touch.
+    const tabs = [['ship', 'Ship', null], ['upgrades', 'Upgrades', 'u:'], ['crew', 'Crew', 'c:']];
     if (visibleResearch(S).length) tabs.push(['research', 'Research', 'r:']);
-    tabs.push(['crew', 'Crew', 'c:']);
     if (this.relicsOn()) tabs.push(['relics', 'Relics', 'x:']);
     if (S.runs > 0) tabs.push(['stats', 'Stats', null]);
     if (!tabs.some(t => t[0] === this.tab)) this.tab = 'ship';
@@ -241,9 +251,12 @@ export class Hangar {
   }
 
   crew() {
-    const S = this.S;
+    const S = this.S, ids = crewUnlocked(S);
+    // one crew AI chimes in with a tip, picked fresh each time the tab opens
+    if (!this.chatter || !ids.includes(this.chatter)) this.chatter = ids[(Math.random() * ids.length) | 0];
+    const ch = CREW[this.chatter];
     let html = `<section class="group"><h3>AI crew · skills persist over the Ansible link</h3>
-      <p class="note">Crew earn XP free on every run. <b>Sim-train</b> gives the same XP instantly, paid in Data instead. Data also buys research, so train when you have Data to spare or an AI is falling behind. Tap a portrait to visit their station and hear what they think you should upgrade.</p>
+      <p class="chatter" style="--c:${ch.color}"><b>${ch.name}</b> ${ch.say}</p>
       <div class="items">`;
     for (const id of crewUnlocked(S)) {
       const c = S.crew[id], d = CREW[id];
@@ -255,7 +268,8 @@ export class Hangar {
           <div class="lvl" style="color:${d.color}">Level ${c.lvl}${maxed ? ' · MAX' : ''}</div>
           <div class="xp"><i style="width:${maxed ? 100 : Math.min(100, c.xp / need * 100)}%"></i></div>
         </div></div>
-        <p>${d.perk}. Learns from ${d.xpFrom}.</p>
+        <div class="eff">${d.bonus(c.lvl)}${maxed ? '' : ` <span>→ ${d.bonus(c.lvl + 1)}</span>`}</div>
+        <p>Learns from ${d.xpFrom}.</p>
         <button class="buy ${ok ? 'ok' : ''}" data-train="${id}" ${ok ? '' : 'disabled'}>${maxed ? 'MAXED' : `Sim-train +${Math.ceil(need * 0.35)} XP · <span class="cost d">◈</span>${fmt(tc)}`}</button>
       </div>`;
     }

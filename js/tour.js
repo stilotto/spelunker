@@ -419,7 +419,7 @@ export class Tour {
         { kind: 'radar' },
         { title: 'DEPTH LOG', lines: MASSES.slice(0, S.massUnlocked + 1).map((m, i) => [m.name, `${fmt(S.best[i] || 0)} / ${fmt(m.core)} m`, (S.best[i] || 0) / m.core]) },
         { title: 'HELM SYSTEMS', lines: [up('drive'), S.runs >= 2 ? up('thrust') : ['Lateral thrusters', 'LOCKED', undefined, true], rs('overdrive')] },
-        { title: 'MISSION', lines: [['Target', MASSES[S.mass].name], ['Runs flown', fmt(S.runs)], ['Cores destroyed', fmt(Object.values(S.cleared).reduce((a, b) => a + b, 0))]] },
+        { title: 'MISSION', lines: [['Target', MASSES[S.mass].name], ['Runs flown', fmt((S.worldRuns || {})[S.mass] || 0)], ['Cores destroyed', fmt(Object.values(S.cleared).reduce((a, b) => a + b, 0))]] },
         { kind: 'rain' },
       ];
       case 'guns': return [

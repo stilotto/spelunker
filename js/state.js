@@ -7,11 +7,13 @@ export function freshState() {
   return {
     v: 1,
     salvage: 0, data: 0, shards: 0,
+    shardDust: 0,         // fraction of a shard banked toward the next one
     up: {}, research: {}, relics: {},
     crew: { gunner: { lvl: 1, xp: 0 } },
     mass: 0, massUnlocked: 0, cleared: {},
     best: {},             // mass index -> best depth in metres
     runs: 0,
+    worldRuns: {},        // mass index -> runs flown there
     seen: {},             // ids the player has already been shown (for NEW badges)
     contacts: {},         // enemy types encountered (first contact pays Data)
     lifetime: { salvage: 0, kills: 0, depth: 0, boarders: 0 },
@@ -56,6 +58,12 @@ export function load() {
     const saved = JSON.parse(raw);
     const s = Object.assign(freshState(), saved);
     if (!saved.stats) s.stats.since = s.runs;
+    if (!saved.worldRuns) {
+      // older saves only kept a total: split it using the run history
+      for (const r of s.history) if (r.m > 0) s.worldRuns[r.m] = (s.worldRuns[r.m] || 0) + 1;
+      const rest = s.runs - Object.values(s.worldRuns).reduce((a, b) => a + b, 0);
+      if (rest > 0) s.worldRuns[0] = rest;
+    }
     return s;
   } catch (e) {
     return freshState();
