@@ -4,11 +4,14 @@
 export const M = 10; // world units per metre
 
 // ---------------------------------------------------------------- masses
+// core = depth in metres. mult scales enemy health, damage and loot; heat
+// scales heat build-up. coreHp is set per world, not from mult: the core
+// fight is a race against heat, so it has to grow slower than the tunnel.
 export const MASSES = [
   {
     id: 'cinder', name: 'CINDER', kind: 'Molten world',
     blurb: 'A dead forge-planet, hollowed into a weapon. Its lava tubes run straight to a burning heart.',
-    core: 3000, mult: 1, heat: 1,
+    core: 3000, mult: 1, heat: 1, coreHp: 9900,
     pal: {
       bg0: '#1a0703', bg1: '#060101', rock0: '#2b120b', rock1: '#140806', edge: '#ff6a1f', edge2: '#ffc15a',
       vein: '#ff4d1a', ember: '#ff9a3c', accent: '#ffb347', enemy: '#ff5040', enemy2: '#ffd070', fog: 'rgba(255,90,30,', core: '#ff7a2a',
@@ -18,7 +21,7 @@ export const MASSES = [
   {
     id: 'tet', name: 'THE TET', kind: 'Orbital megastructure',
     blurb: 'A silent tetrahedron the size of a moon. Its skin is white glass; its insides are perfect geometry.',
-    core: 4500, mult: 4, heat: 1.3,
+    core: 4500, mult: 4, heat: 1.3, coreHp: 49500,
     pal: {
       bg0: '#0c0e12', bg1: '#000000', rock0: '#d9dee6', rock1: '#7d8694', edge: '#ffffff', edge2: '#9fd8ff',
       vein: '#1a1d22', ember: '#cfe8ff', accent: '#9fd8ff', enemy: '#e8eef5', enemy2: '#ff3355', fog: 'rgba(160,210,255,', core: '#ffffff',
@@ -28,7 +31,7 @@ export const MASSES = [
   {
     id: 'veil', name: 'THE VEIL', kind: 'Living machine-cloud',
     blurb: 'A wandering intelligence wrapped in plasma. It has swallowed seven probes. You intend to be the eighth, and the last.',
-    core: 6000, mult: 6, heat: 1.3,
+    core: 6000, mult: 12, heat: 1.45, coreHp: 70000,
     pal: {
       bg0: '#0b0626', bg1: '#02010a', rock0: '#2a1760', rock1: '#110a30', edge: '#8a7bff', edge2: '#5ff0ff',
       vein: '#b06bff', ember: '#7fe9ff', accent: '#8fe8ff', enemy: '#c38bff', enemy2: '#5ff0ff', fog: 'rgba(140,110,255,', core: '#aef7ff',
@@ -38,7 +41,7 @@ export const MASSES = [
   {
     id: 'ossuary', name: 'OSSUARY', kind: 'Hive moon',
     blurb: 'Bone-white tunnels, grown not built. Something down there is still breathing.',
-    core: 7500, mult: 14, heat: 1.45,
+    core: 7500, mult: 30, heat: 1.6, coreHp: 90000,
     pal: {
       bg0: '#07140a', bg1: '#010402', rock0: '#23331c', rock1: '#0d160b', edge: '#9dff4a', edge2: '#e9f5c9',
       vein: '#5cff6a', ember: '#b6ff6a', accent: '#b6ff6a', enemy: '#d8ff5a', enemy2: '#ff5ab8', fog: 'rgba(120,255,90,', core: '#d8ff5a',
@@ -48,7 +51,7 @@ export const MASSES = [
   {
     id: 'dyson', name: 'DYSON KNOT', kind: 'Star-cage',
     blurb: 'A lattice wound around a captive sun. The enemy\'s capital. Its core is a star.',
-    core: 9000, mult: 32, heat: 1.6,
+    core: 9000, mult: 44, heat: 1.75, coreHp: 150000,
     pal: {
       bg0: '#1a1203', bg1: '#030200', rock0: '#3a2a0c', rock1: '#140e03', edge: '#ffd24a', edge2: '#fff4c2',
       vein: '#ffb020', ember: '#ffe38a', accent: '#ffd24a', enemy: '#ffd24a', enemy2: '#ff6a3a', fog: 'rgba(255,200,80,', core: '#fff4c2',

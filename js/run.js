@@ -175,7 +175,7 @@ export class Run {
   spawnHeart() {
     const y = this.coreY + 150;
     const def = ENEMIES.heart;
-    const hp = 2200 * this.hpPow(this.coreY) * (1 + this.massIdx * 0.25);
+    const hp = this.mass.coreHp;
     this.heart = { type: 'heart', x: this.center(y), y, hp, maxHp: hp, r: 190, t: 0, cd: 2, spawnCd: 4, flash: 0, stun: 0, buff: 0, active: true, seed: 0 };
     this.enemies.push(this.heart);
     this.tally.enc.heart = 1;
