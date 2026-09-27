@@ -150,7 +150,7 @@ export const UPGRADES = [
   { id: 'magnet',   g: 'sys',   name: 'Salvage tractor',  base: 25,  k: 1.4,  max: 20, show: s => s.runs >= 3, desc: 'Pull salvage from further away', fmt: l => `${160 + 40 * l} range` },
   { id: 'scrap',    g: 'sys',   name: 'Scrap processors', base: 80,  k: 1.55, max: 20, show: s => s.bestAll >= 480, desc: '+10% salvage', fmt: l => `+${10 * l}% salvage` },
   { id: 'bots',     g: 'sys',   name: 'Security bots',    base: 120, k: 1.6,  max: 8,  show: () => true, req: ['security'], desc: '+1 security bot', fmt: l => `${2 + l} bots` },
-  { id: 'botarm',   g: 'sys',   name: 'Bot armament',     base: 150, k: 1.5,  max: 15, show: () => true, req: ['security'], desc: '+20% bot damage and health', fmt: l => `+${20 * l}% bots` },
+  { id: 'botarm',   g: 'sys',   name: 'Bot armament',     base: 150, k: 1.5,  max: 15, show: () => true, req: ['security'], desc: '+20% bot damage and health', fmt: l => `+${20 * l}% bot dmg & HP` },
   { id: 'empup',    g: 'sys',   name: 'EMP capacitors',   base: 260, k: 1.6,  max: 10, show: () => true, req: ['emp'], desc: '-2s EMP cooldown, bigger radius', fmt: l => `${24 - 2 * l}s cooldown` },
   { id: 'odup',     g: 'sys',   name: 'Overdrive injectors', base: 300, k: 1.6, max: 10, show: () => true, req: ['overdrive'], desc: '+0.5s overdrive duration', fmt: l => `${(3 + 0.5 * l).toFixed(1)}s burn` },
 ];
