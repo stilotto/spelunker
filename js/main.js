@@ -252,6 +252,10 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  // iOS can change the viewport (toolbars, tab switches) without a resize event;
+  // re-sync so the canvas is never stretched.
+  const cv = R.cv;
+  if (cv.clientWidth && (Math.abs(cv.clientWidth - R.w) > 1 || Math.abs(cv.clientHeight - R.h) > 1)) R.resize();
   if (I.edge.pause) { I.edge.pause = false; if (mode === 'run') setPause(!paused); }
   if (mode === 'run') {
     if (!paused) {
