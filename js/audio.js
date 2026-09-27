@@ -3,13 +3,29 @@ let ac = null, master = null, on = true;
 const last = {};
 
 export function initAudio() {
-  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  if (ac) { wake(); return; }
   try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = 0.35; master.connect(ac.destination);
+    wake();
   } catch (e) { ac = null; }
 }
-export function setSound(v) { on = v; }
+export function setSound(v) { on = v; if (!v) sleep(); }
+
+// A running AudioContext keeps the phone's audio hardware awake even in
+// silence, so suspend it after a few quiet seconds and wake it on the next sound.
+let idleT = 0;
+function wake() {
+  if (ac.state === 'suspended') ac.resume().catch(() => {});
+  clearTimeout(idleT); idleT = setTimeout(sleep, 4000);
+}
+function sleep() {
+  clearTimeout(idleT);
+  if (ac && ac.state === 'running') ac.suspend().catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) sleep(); });
+// Some browsers only let a tap resume audio; any tap brings it back.
+document.addEventListener('pointerdown', () => { if (ac && on) wake(); }, true);
 
 function tone(freq, dur, type = 'square', vol = 0.2, slide = 0) {
   const t = ac.currentTime;
@@ -32,6 +48,7 @@ function noise(dur, vol = 0.3, freq = 800) {
 
 export function sfx(name) {
   if (!ac || !on) return;
+  wake();
   const now = ac.currentTime;
   const gap = { shoot: 0.06, coin: 0.04, spark: 0.05, deflect: 0.08 }[name] || 0.03;
   if (last[name] && now - last[name] < gap) return;

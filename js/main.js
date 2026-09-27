@@ -253,8 +253,13 @@ function endRun() {
 }
 
 // ---------------------------------------------------------------- loop
-let last = performance.now();
+// Draw at most ~60fps. The sim steps at a fixed 60Hz, so extra frames on
+// 90/120Hz screens would only redraw the same picture and burn battery.
+let last = performance.now(), nextT = 0;
 function frame(now) {
+  requestAnimationFrame(frame);
+  if (now < nextT - 4) return;
+  nextT = Math.max(nextT + 1000 / 60, now);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   // iOS can change the viewport (toolbars, tab switches) without a resize event;
@@ -286,7 +291,6 @@ function frame(now) {
   } else if (mode === 'hangar') {
     hangar.tick(dt);
   }
-  requestAnimationFrame(frame);
 }
 
 toTitle();
