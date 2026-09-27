@@ -172,8 +172,11 @@ export class Hangar {
     // tabs
     const keys = Object.keys(this.keys());
     const newIn = p => keys.some(k => k.startsWith(p) && this.isNew(k));
-    // relics also light up whenever the shards on hand can buy a level
-    const canRelic = RELICS.some(r => { const l = relic(S, r.id); return l < r.max && S.shards >= r.cost(l); });
+    // research and relics also light up whenever the currency on hand can buy something
+    const canBuy = {
+      research: visibleResearch(S).some(r => !has(S, r.id) && researchAvailable(S, r) && S.data >= r.cost),
+      relics: RELICS.some(r => { const l = relic(S, r.id); return l < r.max && S.shards >= r.cost(l); }),
+    };
     // Crew sits between Upgrades and Research so the two long labels never touch.
     const tabs = [['ship', 'Ship', null], ['upgrades', 'Upgrades', 'u:'], ['crew', 'Crew', 'c:']];
     if (visibleResearch(S).length) tabs.push(['research', 'Research', 'r:']);
@@ -183,7 +186,7 @@ export class Hangar {
     // on wide screens the ship bay is always visible, so "Ship" means upgrades
     const view = this.tab === 'ship' && !this.narrow.matches ? 'upgrades' : this.tab;
     $('#tabs').innerHTML = tabs.map(([id, name, p]) =>
-      `<button class="${view === id ? 'on' : ''}" data-tab="${id}" aria-label="${name}">${ICONS[id]}<small>${name}</small>${(p && newIn(p)) || (id === 'relics' && canRelic) ? '<i class="dot"></i>' : ''}</button>`).join('');
+      `<button class="${view === id ? 'on' : ''}" data-tab="${id}" aria-label="${name}">${ICONS[id]}<small>${name}</small>${(p && newIn(p)) || canBuy[id] ? '<i class="dot"></i>' : ''}</button>`).join('');
     $('.hgrid').classList.toggle('v-ship', view === 'ship');
     $('#hangar').classList.toggle('v-ship', view === 'ship');
     if (view === 'ship') { $('#tabBody').innerHTML = ''; return; }
