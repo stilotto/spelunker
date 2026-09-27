@@ -18,7 +18,7 @@ export const MASSES = [
   {
     id: 'tet', name: 'THE TET', kind: 'Orbital megastructure',
     blurb: 'A silent tetrahedron the size of a moon. Its skin is white glass; its insides are perfect geometry.',
-    core: 4500, mult: 2.6, heat: 1.15,
+    core: 4500, mult: 4, heat: 1.3,
     pal: {
       bg0: '#0c0e12', bg1: '#000000', rock0: '#d9dee6', rock1: '#7d8694', edge: '#ffffff', edge2: '#9fd8ff',
       vein: '#1a1d22', ember: '#cfe8ff', accent: '#9fd8ff', enemy: '#e8eef5', enemy2: '#ff3355', fog: 'rgba(160,210,255,', core: '#ffffff',
