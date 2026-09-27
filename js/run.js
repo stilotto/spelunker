@@ -38,7 +38,8 @@ export class Run {
     this.boarders = []; this.bots = []; this.wing = [];
     this.rooms = ROOMS.map(r => ({ ...r, sab: 0 }));
     for (let i = 0; i < stats.bots; i++) this.bots.push(this.newBot(i));
-    for (let i = 0; i < stats.wingmen; i++) this.wing.push({ a: (i / stats.wingmen) * TAU, cd: rand(0, 0.5), x: 0, y: 0, aim: 0 });
+    // each wingman orbits at its own speed and distance so they read as independent
+    for (let i = 0, n = stats.wingmen; i < n; i++) this.wing.push({ a: (i / n) * TAU, spd: 0.8 + 0.6 * i / Math.max(1, n - 1), orb: 50 + 16 * (i % 3), cd: rand(0, 0.5), x: 0, y: 0, aim: 0 });
     this.turrets = [];
     for (let i = 0; i < stats.turrets; i++) this.turrets.push({ a: 0, aim: Math.PI / 2, cd: rand(0, 0.3), recoil: 0 });
     this.missileCd = 2; this.lanceCd = 2;
@@ -479,12 +480,12 @@ export class Run {
   }
 
   updateWingmen(dt) {
-    const p = this.p, st = this.st, n = this.wing.length;
+    const p = this.p, st = this.st;
     this.wing.forEach((w, i) => {
-      w.a += dt * 1.1;
-      const rr = this.R + 58 + 12 * Math.sin(this.t * 2 + i);
-      w.x = p.x + Math.cos(w.a + (i / n) * TAU) * rr;
-      w.y = p.y + Math.sin(w.a + (i / n) * TAU) * rr * 0.85;
+      w.a += dt * w.spd;
+      const rr = this.R + w.orb + 12 * Math.sin(this.t * 2 + i * 1.7);
+      w.x = p.x + Math.cos(w.a) * rr;
+      w.y = p.y + Math.sin(w.a) * rr * 0.85;
       w.cd -= dt;
       const tgt = this.pickTarget(w.x, w.y, 520, false);
       if (tgt && w.cd <= 0) {

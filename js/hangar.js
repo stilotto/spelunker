@@ -419,9 +419,11 @@ export class Hangar {
     const sR = R / 70; // drawVessel draws in hull-radius terms; scale line widths via transform
     ctx.save(); ctx.translate(x, y); ctx.scale(sR, sR);
     r.drawVessel(ctx, 0, 0, 70, this.vesselOpts(this.t));
-    for (let i = 0; i < st.wingmen; i++) {
-      const a = this.t * 1.1 + (i / st.wingmen) * TAU;
-      const wx = Math.cos(a) * 128, wy = Math.sin(a) * 110;
+    for (let i = 0, n = st.wingmen; i < n; i++) {
+      // same per-wingman speed and distance as run.js, so they drift independently
+      const a = this.t * (0.8 + 0.6 * i / Math.max(1, n - 1)) + (i / n) * TAU;
+      const rr = 1 + (16 * (i % 3) - 8) / 128;
+      const wx = Math.cos(a) * 128 * rr, wy = Math.sin(a) * 110 * rr;
       ctx.fillStyle = '#12202a'; ctx.strokeStyle = '#7dffcf'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(wx, wy, 8, 0, TAU); ctx.fill(); ctx.stroke();
     }
