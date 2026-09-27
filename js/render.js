@@ -558,12 +558,13 @@ export class Renderer {
   }
 
   drawBullets(run) {
-    const { ctx } = this, pal = run.mass.pal;
+    // One danger colour in every mass, so enemy fire never reads as gold salvage.
+    const { ctx } = this;
     for (const b of run.bullets) {
-      ctx.fillStyle = pal.enemy2; ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#ff2d6f'; ctx.globalAlpha = 0.45;
       ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe0ea'; ctx.strokeStyle = '#ff2d6f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, TAU); ctx.fill(); ctx.stroke();
     }
   }
 
