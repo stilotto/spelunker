@@ -175,7 +175,7 @@ export class Run {
   spawnHeart() {
     const y = this.coreY + 150;
     const def = ENEMIES.heart;
-    const hp = 1200 * this.hpPow(this.coreY) * (1 + this.massIdx * 0.25);
+    const hp = 2200 * this.hpPow(this.coreY) * (1 + this.massIdx * 0.25);
     this.heart = { type: 'heart', x: this.center(y), y, hp, maxHp: hp, r: 190, t: 0, cd: 2, spawnCd: 4, flash: 0, stun: 0, buff: 0, active: true, seed: 0 };
     this.enemies.push(this.heart);
     this.tally.enc.heart = 1;
@@ -723,17 +723,26 @@ export class Run {
         }
         case 'heart': {
           e.cd -= dt; e.spawnCd -= dt;
+          // Enraged below half health: faster rings plus aimed volleys at the ship.
+          const rage = e.hp < e.maxHp * 0.5;
           if (e.cd <= 0) {
-            e.cd = 2.6 - Math.min(1.2, (1 - e.hp / e.maxHp) * 1.5);
-            const n = 14 + this.massIdx * 2, off = rand(0, TAU);
+            e.cd = 2.2 - Math.min(1.0, (1 - e.hp / e.maxHp) * 1.4);
+            const n = 16 + this.massIdx * 2, off = rand(0, TAU);
             for (let i = 0; i < n; i++) {
               const a = off + (i / n) * TAU;
               this.bullets.push({ x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, dmg: 7 * dp, carry: false, life: 5, k: 'heart' });
             }
+            if (rage) {
+              const aim = Math.atan2(p.y - e.y, p.x - e.x);
+              for (let i = -2; i <= 2; i++) {
+                const a = aim + i * 0.14;
+                this.bullets.push({ x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r, vx: Math.cos(a) * 340, vy: Math.sin(a) * 340, dmg: 8 * dp, carry: false, life: 5, k: 'heart' });
+              }
+            }
             this.emit({ k: 'pulse', x: e.x, y: e.y });
           }
           if (e.spawnCd <= 0) {
-            e.spawnCd = 5.5;
+            e.spawnCd = rage ? 4 : 5.5;
             const types = ['drone', 'drone'];
             if (this.st.bots > 0 || this.massIdx > 0) types.push('breacher');
             const t = pick(types);

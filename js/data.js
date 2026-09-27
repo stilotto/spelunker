@@ -148,7 +148,9 @@ export const UPGRADES = [
 ];
 
 // ---------------------------------------------------------------- relics
-// Bought with core shards: one per core destroyed.
+// Bought with core shards: world N's core pays N shards, for its first
+// SHARD_CLEARS kills (the last world pays every time).
+export const SHARD_CLEARS = 3;
 export const RELICS = [
   { id: 'insert',  name: 'Insertion charge', max: 8, cost: l => 1 + Math.floor(l / 2), desc: 'Start each run 8% of the way to the core.', fmt: l => `start at ${8 * l}%` },
   { id: 'echo',    name: 'Ansible echo',     max: 10, cost: l => 1 + Math.floor(l / 3), desc: '+40% Data per run.', fmt: l => `+${40 * l}% Data` },

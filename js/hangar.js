@@ -1,5 +1,5 @@
 // Between-run hangar: upgrades, research, crew, relics, target select.
-import { ENEMIES, CAUSES, UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS } from './data.js';
+import { ENEMIES, CAUSES, UPGRADES, UPGRADE_GROUPS, CREW, CREW_MAX, crewXpNeed, upgradeCost, MASSES, RELICS, SHARD_CLEARS } from './data.js';
 import {
   lvl, has, relic, visibleUpgrades, visibleResearch, nextTeaser, researchAvailable,
   freshStats, crewUnlocked, trainCost, addCrewXp, buyUpgrade, buyResearch, buyRelic, computeStats, save,
@@ -83,7 +83,7 @@ export class Hangar {
     const CUR = {
       s: ['⬡ Salvage', 'var(--gold)', 'Scrap and crystal you pull from wrecks, caches and the depth you reach.', 'Spend it on Upgrades: hull, drive, heat, weapons and systems.'],
       d: ['◈ Data', 'var(--violet)', 'Scans sent home over the Ansible: more for going deeper, and a bonus the first time you meet a new enemy.', 'Spend it on Research, which unlocks new systems and crew, or to sim-train your crew.'],
-      k: ['✦ Core shards', 'var(--pink)', 'Pieces of a destroyed core. You get them by reaching and destroying a world\'s core.', 'Spend them on Relics: permanent bonuses for every run.'],
+      k: ['✦ Core shards', 'var(--pink)', 'Pieces of a destroyed core. You get them by destroying a world\'s core. Each core only yields shards for its first ' + SHARD_CLEARS + ' kills.', 'Spend them on Relics: permanent bonuses for every run.'],
     };
     document.querySelector('.wallet').addEventListener('click', e => {
       const b = e.target.closest('[data-cur]'); if (!b) return;

@@ -1,5 +1,5 @@
 // Boot, game loop, screen flow, HUD.
-import { M, MASSES, ENEMIES, CREW, CAUSES, upgradeCost } from './data.js';
+import { M, MASSES, ENEMIES, CREW, CAUSES, upgradeCost, SHARD_CLEARS } from './data.js';
 import { load, save, wipe, computeStats, crewUnlocked, addCrewXp, visibleUpgrades, visibleResearch, recordRun } from './state.js';
 import { Run } from './run.js';
 import { Renderer } from './render.js';
@@ -212,10 +212,13 @@ function endRun() {
     const ups = addCrewXp(S, id, xp);
     crewLines.push(`<div><b style="color:${CREW[id].color}">${CREW[id].name}</b> +${xp} XP${ups ? ` <span class="up">▲ level ${S.crew[id].lvl}</span>` : ''}</div>`);
   }
-  let unlockedMass = null, shards = 0;
+  let unlockedMass = null, shards = 0, spent = false;
   if (res.victory) {
     S.cleared[m] = (S.cleared[m] || 0) + 1;
-    shards = m + 1; S.shards += shards;
+    // A core pays shards for its first few kills only (the last world always
+    // pays), so farming an old world can't buy relics that trivialise the next.
+    spent = S.cleared[m] > SHARD_CLEARS && m < MASSES.length - 1;
+    shards = spent ? 0 : m + 1; S.shards += shards;
     if (m === S.massUnlocked && m < MASSES.length - 1) { S.massUnlocked++; unlockedMass = MASSES[m + 1]; }
   }
   const after = snapshot();
@@ -232,7 +235,7 @@ function endRun() {
     <div class="res-rows">
       <div class="res-row"><span>Salvage recovered</span><b style="color:var(--gold)">⬡ ${fmt(res.salvage)}</b></div>
       <div class="res-row"><span>Data transmitted</span><b style="color:var(--violet)">◈ ${fmt(res.data)}</b></div>
-      ${shards ? `<div class="res-row"><span>Core shards</span><b style="color:var(--pink)">✦ ${shards}</b></div>` : ''}
+      ${shards ? `<div class="res-row"><span>Core shards</span><b style="color:var(--pink)">✦ ${shards}</b></div>` : spent ? `<div class="res-row"><span>Core shards</span><b>none left in ${mass.name}</b></div>` : ''}
       ${res.killer ? `<div class="res-row"><span>Cause of loss</span><b>${CAUSES[res.killer] || res.killer}</b></div>` : ''}
       <div class="res-row"><span>Defenders destroyed</span><b>${res.kills}</b></div>
       ${res.boarded ? `<div class="res-row"><span>Boarders repelled</span><b>${res.repelled} / ${res.boarded}</b></div>` : ''}
